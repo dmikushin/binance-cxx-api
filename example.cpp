@@ -48,34 +48,10 @@ int main()
 {
 	Json::Value result;
 	
+	Market market;
+	
 	// Klines / CandleStick
- 	get_klines("POEBTC", "1h", 10 , 0, 0, result);
-
-	if (result.isObject())
-	{
-		vector<string> keys = result.getMemberNames();
-		for (int i = 0, e = keys.size(); i < e; i++)
-		{
-			const string& ikey = keys[i];
-			if (ikey == "code")
-			{
-				for (int j = 0, e = keys.size(); j < e; j++)
-				{
-					const string& jkey = keys[j];
-					if (jkey == "msg")
-					{
-						cerr << "Error: " << result["msg"] << " (code: " << result["code"] << ")" << endl;
-						exit(-1);
-					}
-				}
-			}
-		}
-
-		Json::FastWriter fastWriter;
-		string output = fastWriter.write(result);
-		cerr << "Unexpected object: " << output << endl;
-		exit(-1);
-	}
+	BINANCE_ERR_CHECK(market.getKlines("POEBTC", "1h", 10 , 0, 0, result));
 
  	for (Json::Value::ArrayIndex i = 0 ; i < result.size() ; i++)
  	{
