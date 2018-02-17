@@ -27,23 +27,23 @@
         bool err = false;                                            \
         if (result.isObject())                                       \
         {                                                            \
-		    const vector<string> keys = result.getMemberNames();     \
-			for (int i = 0, e = keys.size(); i < e; i++)             \
-			{                                                        \
-				const string& ikey = keys[i];                        \
-				if (ikey == "code")                                  \
-				{                                                    \
-					for (int j = 0, e = keys.size(); j < e; j++)     \
-					{                                                \
-						const string& jkey = keys[j];                \
-						if (jkey == "msg") { err = true; break; }    \
-					}                                                \
-				}                                                    \
-				                                                     \
-				if (err) break;                                      \
-			}                                                        \
-		}                                                            \
-		if (!err) break;                                             \
+            const vector<string> keys = result.getMemberNames();     \
+            for (int i = 0, e = keys.size(); i < e; i++)             \
+            {                                                        \
+                const string& ikey = keys[i];                        \
+                if (ikey == "code")                                  \
+                {                                                    \
+                    for (int j = 0, e = keys.size(); j < e; j++)     \
+                    {                                                \
+                        const string& jkey = keys[j];                \
+                        if (jkey == "msg") { err = true; break; }    \
+                    }                                                \
+                }                                                    \
+                                                                     \
+                if (err) break;                                      \
+            }                                                        \
+        }                                                            \
+        if (!err) break;                                             \
                                                                      \
         char hostname[HOST_NAME_MAX] = "";                           \
         gethostname(hostname, HOST_NAME_MAX);                        \
@@ -62,7 +62,7 @@
                (size_t)pthread_self(), (int)getpid(), hostname);     \
             while (1) usleep(1000000); /* 1 sec */                   \
         }                                                            \
-	} while (0);
+    } while (0);
 
 #define BINANCE_ERR_CHECK(x)                                         \
     do {                                                             \
