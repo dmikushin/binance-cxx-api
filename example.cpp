@@ -1,12 +1,15 @@
+#include <iostream>
 #include <jsoncpp/json/json.h>
 #include <map>
 #include <string>
 #include <vector>
 
-#include "binacpp.h"
-#include "binacpp_websocket.h"
+#include "binance.h"
+#include "binance_websocket.h"
 
+using namespace binance;
 using namespace std;
+
 map<long, map<string, double> > klinesCache;
 
 static void print_klinesCache()
@@ -44,10 +47,9 @@ static int ws_klines_onData(Json::Value& json_result)
 int main()
 {
 	Json::Value result;
-	long recvWindow = 10000;	
 	
 	// Klines / CandleStick
- 	BinaCPP::get_klines("POEBTC", "1h", 10 , 0, 0, result);
+ 	get_klines("POEBTC", "1h", 10 , 0, 0, result);
 
 	if (result.isObject())
 	{
@@ -88,9 +90,9 @@ int main()
  	print_klinesCache();
  		
  	// Klines/Candlestick update via websocket
- 	BinaCPP_websocket::init();
- 	BinaCPP_websocket::connect_endpoint(ws_klines_onData ,"/ws/poebtc@kline_1m"); 
-	BinaCPP_websocket::enter_event_loop();
+ 	Websocket::init();
+ 	Websocket::connect_endpoint(ws_klines_onData ,"/ws/poebtc@kline_1m"); 
+	Websocket::enter_event_loop();
 	
 	return 0;
 }
