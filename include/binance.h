@@ -55,6 +55,7 @@
             fprintf(stderr, "You may want to set "                   \
                 "FREEZE_ON_ERROR environment "                       \
                 "variable to debug the case\n");                     \
+            exit(-1);                                                \
         }                                                            \
         else {                                                       \
             fprintf(stderr, "thread 0x%zx of pid %d @ %s "           \
@@ -77,6 +78,7 @@
             fprintf(stderr, "You may want to set "                   \
                 "FREEZE_ON_ERROR environment "                       \
                 "variable to debug the case\n");                     \
+            exit(-1);                                                \
         }                                                            \
         else {                                                       \
             fprintf(stderr, "thread 0x%zx of pid %d @ %s "           \
@@ -91,10 +93,11 @@ namespace binance
 	enum binanceError_t
 	{
 		binanceSuccess = 0,
-		binanceErrorInvalidServerResponse = 1,
-		binanceErrorEmptyServerResponse = 2,
-		binanceErrorParsingServerResponse = 3,
-		binanceErrorInvalidSymbol = 4,
+		binanceErrorInvalidServerResponse,
+		binanceErrorEmptyServerResponse,
+		binanceErrorParsingServerResponse,
+		binanceErrorInvalidSymbol,
+		binanceErrorMissingAccountKeys,
 	};
 
 	const char* binanceGetErrorString(const binanceError_t err);
@@ -146,10 +149,16 @@ namespace binance
 
 	void init(std::string &api_key, std::string &secret_key);
 
-	namespace account
+	// API + Secret keys required
+	class Account
 	{
-		// API + Secret keys required
-		void getInfo(long recvWindow , Json::Value &json_result);
+		std::string api_key, secret_key;
+	
+	public :
+
+		Account(const std::string api_key = "", const std::string secret_key = "");
+
+		binanceError_t getInfo(Json::Value &json_result, long recvWindow = 0);
 
 		void getTrades(
 			const char *symbol,
@@ -237,7 +246,7 @@ namespace binance
 			const char *asset,
 			long recvWindow,
 			Json::Value &json_result);
-	}
+	};
 }
 
 #endif // BINANCE_H
