@@ -1,7 +1,7 @@
 /*
 	Author: tensaix2j
 	Date  : 2017/10/15
-	
+
 	C++ library for Binance API.
 */
 
@@ -18,8 +18,6 @@
 
 #include <curl/curl.h>
 #include <jsoncpp/json/json.h>
-
-#define BINANCE_HOST "https://api.binance.com"
 
 #define CHECK_SERVER_ERR(result)                                     \
     do {                                                             \
@@ -98,12 +96,11 @@ namespace binance
 		binanceErrorParsingServerResponse,
 		binanceErrorInvalidSymbol,
 		binanceErrorMissingAccountKeys,
+		binanceErrorCurlFailed,
+		binanceErrorCurlOutOfMemory,
 	};
 
 	const char* binanceGetErrorString(const binanceError_t err);
-
-	extern std::string api_key;
-	extern std::string secret_key;
 
 	template<typename T> std::string toString(const T& val)
 	{
@@ -114,9 +111,9 @@ namespace binance
 
 	std::string toString(double val);
 
-	void getCurl(std::string &url, std::string &result_json);
+	binanceError_t getCurl(std::string &url, std::string &result_json);
 
-	void getCurlWithHeader(std::string &url, std::string &result_json,
+	binanceError_t getCurlWithHeader(std::string &url, std::string &result_json,
 		std::vector <std::string> &extra_http_header, std::string &post_data, std::string &action);
 
 	size_t getCurlCb(void *content, size_t size, size_t nmemb, std::string *buffer);
@@ -124,12 +121,12 @@ namespace binance
 	class Market
 	{
 		const std::string hostname;
-	
+
 	public :
-	
+
 		Market(const char* hostname = "https://api.binance.com");
 
-		binanceError_t getServerTime(Json::Value &json_result); 	
+		binanceError_t getServerTime(Json::Value &json_result); 
 
 		binanceError_t getAllPrices(Json::Value &json_result);
 		binanceError_t getPrice(const char *symbol, double& price);
@@ -139,113 +136,62 @@ namespace binance
 
 		binanceError_t getDepth(const char *symbol, int limit, Json::Value &json_result);
 		binanceError_t getAggTrades(const char *symbol, int fromId, time_t startTime, time_t endTime,
-			int limit, Json::Value &json_result); 
+			int limit, Json::Value &json_result);
 
-		binanceError_t get24hr(const char *symbol, Json::Value &json_result); 
+		binanceError_t get24hr(const char *symbol, Json::Value &json_result);
 
 		binanceError_t getKlines(const char *symbol, const char *interval, int limit,
 			time_t startTime, time_t endTime, Json::Value &json_result);
 	};
 
-	void init(std::string &api_key, std::string &secret_key);
-
 	// API + Secret keys required
 	class Account
 	{
+		const std::string hostname;
 		std::string api_key, secret_key;
-	
+
 	public :
 
-		Account(const std::string api_key = "", const std::string secret_key = "");
+		Account(const char* hostname = "https://api.binance.com",
+			const std::string api_key = "", const std::string secret_key = "");
 
 		binanceError_t getInfo(Json::Value &json_result, long recvWindow = 0);
 
-		void getTrades(
-			const char *symbol,
-			int limit,
-			long fromId,
-			long recvWindow,
-			Json::Value &json_result
-		);
+		binanceError_t getTrades(const char *symbol, int limit, long fromId,
+			long recvWindow, Json::Value &json_result);
 
-		void getOpenOrders( 
-			const char *symbol, 
-			long recvWindow,   
-			Json::Value &json_result 
-		);
-		
-		void getAllOrders(  
-			const char *symbol, 
-			long orderId,
-			int limit,
-			long recvWindow,
-			Json::Value &json_result 
-		);
+		binanceError_t getOpenOrders(const char *symbol,
+			long recvWindow, Json::Value &json_result);
 
-		void sendOrder(
-			const char *symbol, 
-			const char *side,
-			const char *type,
-			const char *timeInForce,
-			double quantity,
-			double price,
-			const char *newClientOrderId,
-			double stopPrice,
-			double icebergQty,
-			long recvWindow,
-			Json::Value &json_result);
+		binanceError_t getAllOrders(const char *symbol, long orderId, int limit,
+			long recvWindow, Json::Value &json_result);
 
-		void getOrder(
-			const char *symbol, 
-			long orderId,
-			const char *origClientOrderId,
-			long recvWindow,
-			Json::Value &json_result); 
+		binanceError_t sendOrder(const char *symbol, const char *side, const char *type, const char *timeInForce,
+			double quantity, double price, const char *newClientOrderId, double stopPrice, double icebergQty,
+			long recvWindow, Json::Value &json_result);
 
-		void cancelOrder(
-			const char *symbol, 
-			long orderId,
-			const char *origClientOrderId,
-			const char *newClientOrderId,
-			long recvWindow,
-			Json::Value &json_result 
-		);
+		binanceError_t getOrder(const char *symbol, long orderId, const char *origClientOrderId,
+			long recvWindow, Json::Value &json_result);
+
+		binanceError_t cancelOrder(const char *symbol, long orderId, const char *origClientOrderId, const char *newClientOrderId,
+			long recvWindow, Json::Value &json_result);
 
 		// API key required
-		void startUserDataStream(Json::Value &json_result);
-		void keepUserDataStream(const char *listenKey );
-		void closeUserDataStream(const char *listenKey);
+		binanceError_t startUserDataStream(Json::Value &json_result);
+		binanceError_t keepUserDataStream(const char *listenKey);
+		binanceError_t closeUserDataStream(const char *listenKey);
 
 		// WAPI
-		void withdraw(
-			const char *asset,
-			const char *address,
-			const char *addressTag,
-			double amount, 
-			const char *name,
-			long recvWindow,
-			Json::Value &json_result);
+		binanceError_t withdraw(const char *asset, const char *address, const char *addressTag,
+			double amount, const char *name, long recvWindow, Json::Value &json_result);
 
-		void getDepositHistory(
-			const char *asset,
-			int  status,
-			long startTime,
-			long endTime, 
-			long recvWindow,
-			Json::Value &json_result);
+		binanceError_t getDepositHistory(const char *asset, int status, long startTime, long endTime,
+			long recvWindow, Json::Value &json_result);
 
-		void getWithdrawHistory(
-			const char *asset,
-			int  status,
-			long startTime,
-			long endTime, 
-			long recvWindow,
-			Json::Value &json_result); 
+		binanceError_t getWithdrawHistory(const char *asset, int status, long startTime, long endTime,
+			long recvWindow, Json::Value &json_result);
 
-		void getDepositAddress(
-			const char *asset,
-			long recvWindow,
-			Json::Value &json_result);
+		binanceError_t getDepositAddress(const char *asset, long recvWindow, Json::Value &json_result);
 	};
 }
 

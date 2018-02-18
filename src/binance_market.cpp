@@ -1,7 +1,7 @@
 /*
 	Author: tensaix2j
 	Date  : 2017/10/15
-	
+
 	C++ library for Binance API.
 */
 
@@ -15,7 +15,7 @@ using namespace std;
 binance::Market::Market(const char* hostname_) : hostname(hostname_) { }
 
 // GET /api/v1/time
-binanceError_t binance::Market::getServerTime(Json::Value &json_result) 
+binanceError_t binance::Market::getServerTime(Json::Value &json_result)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -34,7 +34,7 @@ binanceError_t binance::Market::getServerTime(Json::Value &json_result)
 		try
 		{
 			Json::Reader reader;
-			json_result.clear();	
+			json_result.clear();
 			reader.parse(str_result, json_result);
 			CHECK_SERVER_ERR(json_result);
 		}
@@ -46,13 +46,13 @@ binanceError_t binance::Market::getServerTime(Json::Value &json_result)
 	}
 
 	Logger::write_log("<get_serverTime> Done.");
-	
+
 	return status;
 }
 
 // Get Latest price for all symbols.
 // GET /api/v1/ticker/allPrices
-binanceError_t binance::Market::getAllPrices(Json::Value &json_result) 
+binanceError_t binance::Market::getAllPrices(Json::Value &json_result)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -71,9 +71,9 @@ binanceError_t binance::Market::getAllPrices(Json::Value &json_result)
 		try
 		{
 			Json::Reader reader;
-			json_result.clear();	
+			json_result.clear();
 			reader.parse(str_result, json_result);
-			CHECK_SERVER_ERR(json_result);		
+			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
 		{
@@ -95,7 +95,7 @@ binanceError_t binance::Market::getPrice(const char *symbol, double& price)
 	Json::Value alltickers;
 	string str_symbol = string_toupper(symbol);
 	binanceError_t status = getAllPrices(alltickers);
-	
+
 	if (status == binanceSuccess)
 	{
 		status = binanceErrorInvalidSymbol;
@@ -111,14 +111,14 @@ binanceError_t binance::Market::getPrice(const char *symbol, double& price)
 	}
 
 	Logger::write_log("<get_price> Done.");
-	
+
 	return status;
 }
 
 // Get Best price/qty on the order book for all symbols.
 // GET /api/v1/ticker/allBookTickers
-binanceError_t binance::Market::getAllBookTickers( Json::Value &json_result) 
-{	
+binanceError_t binance::Market::getAllBookTickers( Json::Value &json_result)
+{
 	binanceError_t status = binanceSuccess;
 
 	Logger::write_log("<get_allBookTickers>");
@@ -132,12 +132,12 @@ binanceError_t binance::Market::getAllBookTickers( Json::Value &json_result)
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;
 	else
-	{	
+	{
 		try
 		{
 			Json::Reader reader;
-			json_result.clear();	
-			reader.parse(str_result, json_result);		
+			json_result.clear();
+			reader.parse(str_result, json_result);
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -148,11 +148,11 @@ binanceError_t binance::Market::getAllBookTickers( Json::Value &json_result)
 	}
 
 	Logger::write_log("<get_allBookTickers> Done.");
-	
+
 	return status;
 }
 
-binanceError_t binance::Market::getBookTicker(const char *symbol, Json::Value &json_result) 
+binanceError_t binance::Market::getBookTicker(const char *symbol, Json::Value &json_result)
 {
 	Logger::write_log("<get_BookTickers>");
 
@@ -167,28 +167,28 @@ binanceError_t binance::Market::getBookTicker(const char *symbol, Json::Value &j
 		{
 			if (alltickers[i]["symbol"].asString() == str_symbol)
 			{
-				json_result = alltickers[i];	
+				json_result = alltickers[i];
 				status = binanceSuccess;
 				break;
 			}
-		}		
+		}
 	}
-	
+
 	Logger::write_log("<get_BookTickers> Done.");
-	
+
 	return status;
 }
 
 // Get Market Depth
 //
 // GET /api/v1/depth
-// 
+//
 // Name	Type		Mandatory	Description
-// symbol	STRING		YES	
+// symbol	STRING		YES
 // limit	INT		NO		Default 100;max 100.
 //
-binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Value &json_result) 
-{	
+binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Value &json_result)
+{
 	binanceError_t status = binanceSuccess;
 
 	Logger::write_log("<get_depth>");
@@ -203,7 +203,7 @@ binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Va
 
 	url.append(querystring);
 	Logger::write_log("<get_depth> url = |%s|", url.c_str());
-	
+
 	string str_result;
 	getCurl(url, str_result);
 
@@ -214,8 +214,8 @@ binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Va
 		try
 		{
 			Json::Reader reader;
-			json_result.clear();	
-			reader.parse(str_result, json_result);	
+			json_result.clear();
+			reader.parse(str_result, json_result);
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -231,17 +231,17 @@ binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Va
 }
 
 // Get Aggregated Trades list
-// 
+//
 // GET /api/v1/aggTrades
-// 
+//
 // Name		Type	Mandatory	Description
-// symbol		STRING	YES	
+// symbol		STRING	YES
 // fromId		LONG	NO		ID to get aggregate trades from INCLUSIVE.
 // startTime	LONG	NO		Timestamp in ms to get aggregate trades from INCLUSIVE.
 // endTime		LONG	NO		Timestamp in ms to get aggregate trades until INCLUSIVE.
 // limit		INT	NO		Default 500;max 500.
 //
-binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, time_t startTime, time_t endTime, int limit, Json::Value &json_result) 
+binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, time_t startTime, time_t endTime, int limit, Json::Value &json_result)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -272,7 +272,7 @@ binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, tim
 
 	url.append(querystring);
 	Logger::write_log("<get_aggTrades> url = |%s|", url.c_str());
-	
+
 	string str_result;
 	getCurl(url, str_result);
 
@@ -283,8 +283,8 @@ binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, tim
 		try
 		{
 			Json::Reader reader;
-			json_result.clear();	
-			reader.parse(str_result, json_result);	
+			json_result.clear();
+			reader.parse(str_result, json_result);
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -302,10 +302,10 @@ binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, tim
 // Get 24hr ticker price change statistics
 //
 // Name	Type	Mandatory	Description
-// symbol	STRING	YES	
+// symbol	STRING	YES
 //
-binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_result) 
-{	
+binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_result)
+{
 	binanceError_t status = binanceSuccess;
 
 	Logger::write_log("<get_24hr>");
@@ -318,7 +318,7 @@ binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_re
 
 	url.append(querystring);
 	Logger::write_log("<get_24hr> url = |%s|", url.c_str());
-	
+
 	string str_result;
 	getCurl(url, str_result);
 
@@ -329,8 +329,8 @@ binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_re
 		try
 		{
 			Json::Reader reader;
-			json_result.clear();	
-			reader.parse(str_result, json_result);	
+			json_result.clear();
+			reader.parse(str_result, json_result);
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -346,18 +346,18 @@ binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_re
 }
 
 // Get KLines(Candle stick / OHLC)
-// 
-// GET /api/v1/klines
-// 
-// Name		Type	Mandatory	Description
-// symbol		STRING	YES	
-// interval	ENUM	YES	
-// limit		INT		NO	Default 500;max 500.
-// startTime	LONG	NO	
-// endTime		LONG	NO	
 //
-binanceError_t binance::Market::getKlines(const char *symbol, const char *interval, int limit, time_t startTime, time_t endTime, Json::Value &json_result) 
-{		
+// GET /api/v1/klines
+//
+// Name		Type	Mandatory	Description
+// symbol		STRING	YES
+// interval	ENUM	YES
+// limit		INT		NO	Default 500;max 500.
+// startTime	LONG	NO
+// endTime		LONG	NO
+//
+binanceError_t binance::Market::getKlines(const char *symbol, const char *interval, int limit, time_t startTime, time_t endTime, Json::Value &json_result)
+{
 	binanceError_t status = binanceSuccess;
 
 	Logger::write_log("<get_klines>");
@@ -378,17 +378,17 @@ binanceError_t binance::Market::getKlines(const char *symbol, const char *interv
 
 		querystring.append("&endTime=");
 		querystring.append(to_string(endTime));
-	
+
 	}
 	else if (limit > 0)
 	{
 		querystring.append("&limit=");
 		querystring.append(to_string(limit));
 	}
-	
+
 	url.append(querystring);
 	Logger::write_log("<get_klines> url = |%s|", url.c_str());
-	
+
 	string str_result;
 	getCurl(url, str_result);
 
@@ -399,9 +399,9 @@ binanceError_t binance::Market::getKlines(const char *symbol, const char *interv
 		try
 		{
 			Json::Reader reader;
-			json_result.clear();	
+			json_result.clear();
 			reader.parse(str_result, json_result);
-			CHECK_SERVER_ERR(json_result);		
+			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
 		{
