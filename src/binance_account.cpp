@@ -365,8 +365,8 @@ binanceError_t binance::Account::getOpenOrders(Json::Value &json_result, const c
 // recvWindow	LONG	NO	
 // timestamp	LONG	YES	
 //
-binanceError_t binance::Account::getAllOrders(const char *symbol, long orderId, int limit,
-	long recvWindow, Json::Value &json_result) 
+binanceError_t binance::Account::getAllOrders(Json::Value &json_result, const char *symbol,
+	long orderId, int limit, long recvWindow) 
 {
 	binanceError_t status = binanceSuccess;
 
