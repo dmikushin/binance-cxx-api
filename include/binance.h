@@ -160,8 +160,9 @@ namespace binance
 		binanceError_t getTrades(const char *symbol, int limit, long fromId,
 			long recvWindow, Json::Value &json_result);
 
-		binanceError_t getOpenOrders(const char *symbol,
-			long recvWindow, Json::Value &json_result);
+		binanceError_t getOpenOrders(Json::Value &json_result, long recvWindow = 0);
+
+		binanceError_t getOpenOrders(Json::Value &json_result, const char *symbol, long recvWindow = 0);
 
 		binanceError_t getAllOrders(const char *symbol, long orderId, int limit,
 			long recvWindow, Json::Value &json_result);
