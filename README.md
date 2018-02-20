@@ -8,6 +8,7 @@ This version is derived from https://github.com/binance-exchange/binacpp with sl
  * Commented out flags no longer supported by modern versions of web sockets
  * CMake build system
  * Refactored entire API
+ * Maintaining thread safety
 
 ### Prerequisites
 
