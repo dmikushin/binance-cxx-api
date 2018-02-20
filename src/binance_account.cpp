@@ -30,9 +30,12 @@ hostname(hostname_), api_key(api_key_), secret_key(secret_key_)
 		wordexp(default_api_key_path.c_str(), &p, 0);
 		w = p.we_wordv;
 		ifstream binanceapi(w[0]);
-		binanceapi >> api_key;
-		binanceapi.close();
-		wordfree(&p);	
+		if (binanceapi.is_open())
+		{
+			binanceapi >> api_key;
+			binanceapi.close();
+		}
+		wordfree(&p);
 	}
 
 	if (secret_key == "")
@@ -42,10 +45,18 @@ hostname(hostname_), api_key(api_key_), secret_key(secret_key_)
 		wordexp(default_secret_key_path.c_str(), &p, 0);
 		w = p.we_wordv;
 		ifstream binanceapi(w[0]);
-		binanceapi >> secret_key;
-		binanceapi.close();
-		wordfree(&p);	
+		if (binanceapi.is_open())
+		{
+			binanceapi >> secret_key;
+			binanceapi.close();
+		}
+		wordfree(&p);
 	}
+}
+
+bool binance::Account::keysAreSet() const
+{
+	return ((api_key != "") && (secret_key != ""));
 }
 
 // Get current account information. (SIGNED)

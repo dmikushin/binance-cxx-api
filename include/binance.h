@@ -158,6 +158,8 @@ namespace binance
 		Account(const char* hostname = "https://api.binance.com",
 			const std::string api_key = "", const std::string secret_key = "");
 
+		bool keysAreSet() const;
+
 		binanceError_t getInfo(Json::Value &json_result, long recvWindow = 0);
 
 		binanceError_t getTrades(const char *symbol, int limit, long fromId,
