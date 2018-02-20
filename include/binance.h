@@ -152,6 +152,9 @@ namespace binance
 
 	public :
 
+		static const std::string default_api_key_path;
+		static const std::string default_secret_key_path;
+
 		Account(const char* hostname = "https://api.binance.com",
 			const std::string api_key = "", const std::string secret_key = "");
 

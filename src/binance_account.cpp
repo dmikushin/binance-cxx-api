@@ -15,6 +15,9 @@
 using namespace binance;
 using namespace std;
 
+const string binance::Account::default_api_key_path = "$HOME/.bitrader/key";
+const string binance::Account::default_secret_key_path = "$HOME/.bitrader/secret";
+
 binance::Account::Account(const char* hostname_, const string api_key_, const string secret_key_) :
 
 hostname(hostname_), api_key(api_key_), secret_key(secret_key_)
@@ -24,7 +27,7 @@ hostname(hostname_), api_key(api_key_), secret_key(secret_key_)
 	{
 		wordexp_t p;
 		char** w;
-		wordexp("$HOME/.bitrader/key", &p, 0);
+		wordexp(default_api_key_path.c_str(), &p, 0);
 		w = p.we_wordv;
 		ifstream binanceapi(w[0]);
 		binanceapi >> api_key;
@@ -36,7 +39,7 @@ hostname(hostname_), api_key(api_key_), secret_key(secret_key_)
 	{
 		wordexp_t p;
 		char** w;
-		wordexp("$HOME/.bitrader/secret", &p, 0);
+		wordexp(default_secret_key_path.c_str(), &p, 0);
 		w = p.we_wordv;
 		ifstream binanceapi(w[0]);
 		binanceapi >> secret_key;
