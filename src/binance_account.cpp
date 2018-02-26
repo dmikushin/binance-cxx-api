@@ -132,6 +132,81 @@ binanceError_t binance::Account::getInfo(Json::Value &json_result, long recvWind
 	return status;
 }
 
+// Old trade lookup (MARKET_DATA)
+//
+// GET /api/v1/historicalTrades
+//
+// Name	Type	Mandatory	Description
+// symbol	STRING	YES	
+// limit	INT	NO	Default 500; max 500.
+// fromId	LONG	NO	TradeId to fetch from. Default gets most recent trades.
+//
+binanceError_t binance::Account::getHistoricalTrades(Json::Value &json_result, const char *symbol, long fromId, int limit)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_historicalTrades>");
+
+	if (api_key.size() == 0 || secret_key.size() == 0)
+		status = binanceErrorMissingAccountKeys;
+	else
+	{
+		string url(hostname);
+		url += "/api/v1/historicalTrades?";
+
+		string querystring("symbol=");
+		querystring.append(symbol);
+	
+		if (fromId != -1)
+		{
+			querystring.append("&fromId=");
+			querystring.append(to_string(fromId));
+		}
+
+		if (limit != -1)
+		{
+			querystring.append("&limit=");
+			querystring.append(to_string(limit));
+		}
+
+		url.append(querystring);
+		vector <string> extra_http_header;
+		string header_chunk("X-MBX-APIKEY: ");
+		header_chunk.append(api_key);
+		extra_http_header.push_back(header_chunk);
+
+		Logger::write_log("<get_historicalTrades> url = |%s|", url.c_str());
+
+		string action = "GET";
+		string post_data = "";
+
+		string str_result;
+		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+
+		if (str_result.size() == 0)
+			status = binanceErrorEmptyServerResponse;
+		else
+		{
+			try
+			{
+				Json::Reader reader;
+				json_result.clear();
+				reader.parse(str_result, json_result);
+				CHECK_SERVER_ERR(json_result);
+			}
+			catch (exception &e)
+			{
+			 	Logger::write_log("<get_historicalTrades> Error ! %s", e.what());
+				status = binanceErrorParsingServerResponse;
+			}
+		}
+
+		Logger::write_log("<get_historicalTrades> Done.");
+	}
+
+	return status;
+}
+
 // Get trades for a specific account and symbol. (SIGNED)
 //
 // GET /api/v3/myTrades

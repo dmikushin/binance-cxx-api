@@ -162,6 +162,8 @@ namespace binance
 
 		binanceError_t getInfo(Json::Value &json_result, long recvWindow = 0);
 
+		binanceError_t getHistoricalTrades(Json::Value &json_result, const char *symbol, long fromId = -1, int limit = -1);
+
 		binanceError_t getTrades(const char *symbol, int limit, long fromId,
 			long recvWindow, Json::Value &json_result);
 
