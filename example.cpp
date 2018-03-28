@@ -47,8 +47,10 @@ static int ws_klines_onData(Json::Value& json_result)
 int main()
 {
 	Json::Value result;
+
+	Server server;
 	
-	Market market;
+	Market market(server);
 	
 	// Klines / CandleStick
 	BINANCE_ERR_CHECK(market.getKlines("POEBTC", "1h", 10 , 0, 0, result));

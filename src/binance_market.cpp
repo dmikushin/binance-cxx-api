@@ -12,43 +12,7 @@
 using namespace binance;
 using namespace std;
 
-binance::Market::Market(const char* hostname_) : hostname(hostname_) { }
-
-// GET /api/v1/time
-binanceError_t binance::Market::getServerTime(Json::Value &json_result)
-{
-	binanceError_t status = binanceSuccess;
-
-	Logger::write_log("<get_serverTime>");
-
-	string url(hostname);
-	url += "/api/v1/time";
-
-	string str_result;
-	getCurl(url, str_result);
-
-	if (str_result.size() == 0)
-		status = binanceErrorEmptyServerResponse;
-	else
-	{
-		try
-		{
-			Json::Reader reader;
-			json_result.clear();
-			reader.parse(str_result, json_result);
-			CHECK_SERVER_ERR(json_result);
-		}
-		catch (exception &e)
-		{
-		 	Logger::write_log("<get_serverTime> Error ! %s", e.what());
-			status = binanceErrorParsingServerResponse;
-		}
-	}
-
-	Logger::write_log("<get_serverTime> Done.");
-
-	return status;
-}
+binance::Market::Market(const binance::Server& server_) : hostname(server_.getHostname()), server(server_) { }
 
 // Get Latest price for all symbols.
 // GET /api/v1/ticker/allPrices
@@ -62,7 +26,7 @@ binanceError_t binance::Market::getAllPrices(Json::Value &json_result)
 	url += "/api/v1/ticker/allPrices";
 
 	string str_result;
-	getCurl(url, str_result);
+	Server::getCurl(str_result, url);
 
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;
@@ -127,7 +91,7 @@ binanceError_t binance::Market::getAllBookTickers( Json::Value &json_result)
 	url += "/api/v1/ticker/allBookTickers";
 
 	string str_result;
-	getCurl(url, str_result);
+	Server::getCurl(str_result, url);
 
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;
@@ -205,7 +169,7 @@ binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Va
 	Logger::write_log("<get_depth> url = |%s|", url.c_str());
 
 	string str_result;
-	getCurl(url, str_result);
+	Server::getCurl(str_result, url);
 
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;
@@ -274,7 +238,7 @@ binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, tim
 	Logger::write_log("<get_aggTrades> url = |%s|", url.c_str());
 
 	string str_result;
-	getCurl(url, str_result);
+	Server::getCurl(str_result, url);
 
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;
@@ -320,7 +284,7 @@ binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_re
 	Logger::write_log("<get_24hr> url = |%s|", url.c_str());
 
 	string str_result;
-	getCurl(url, str_result);
+	Server::getCurl(str_result, url);
 
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;
@@ -390,7 +354,7 @@ binanceError_t binance::Market::getKlines(const char *symbol, const char *interv
 	Logger::write_log("<get_klines> url = |%s|", url.c_str());
 
 	string str_result;
-	getCurl(url, str_result);
+	Server::getCurl(str_result, url);
 
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;

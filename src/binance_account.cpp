@@ -18,9 +18,9 @@ using namespace std;
 const string binance::Account::default_api_key_path = "$HOME/.bitrader/key";
 const string binance::Account::default_secret_key_path = "$HOME/.bitrader/secret";
 
-binance::Account::Account(const char* hostname_, const string api_key_, const string secret_key_) :
+binance::Account::Account(const binance::Server& server_, const string api_key_, const string secret_key_) :
 
-hostname(hostname_), api_key(api_key_), secret_key(secret_key_)
+hostname(server_.getHostname()), server(server_), api_key(api_key_), secret_key(secret_key_)
 
 {
 	if (api_key == "")
@@ -106,7 +106,7 @@ binanceError_t binance::Account::getInfo(Json::Value &json_result, long recvWind
 		string post_data = "";
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -131,6 +131,76 @@ binanceError_t binance::Account::getInfo(Json::Value &json_result, long recvWind
 	
 	return status;
 }
+
+// Recent trades list
+//
+// GET /api/v1/trades
+// Get recent trades (up to last 500).
+//
+// Name	Type	Mandatory	Description
+// symbol	STRING	YES	
+// limit	INT	NO	Default 500; max 500.
+//
+binanceError_t binance::Account::getTrades(Json::Value &json_result, const char *symbol, int limit)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_trades>");
+
+	if (api_key.size() == 0 || secret_key.size() == 0)
+		status = binanceErrorMissingAccountKeys;
+	else
+	{
+		string url(hostname);
+		url += "/api/v1/trades?";
+
+		string querystring("symbol=");
+		querystring.append(symbol);
+	
+		if (limit != -1)
+		{
+			querystring.append("&limit=");
+			querystring.append(to_string(limit));
+		}
+
+		url.append(querystring);
+		vector <string> extra_http_header;
+		string header_chunk("X-MBX-APIKEY: ");
+		header_chunk.append(api_key);
+		extra_http_header.push_back(header_chunk);
+
+		Logger::write_log("<get_trades> url = |%s|", url.c_str());
+
+		string action = "GET";
+		string post_data = "";
+
+		string str_result;
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
+
+		if (str_result.size() == 0)
+			status = binanceErrorEmptyServerResponse;
+		else
+		{
+			try
+			{
+				Json::Reader reader;
+				json_result.clear();
+				reader.parse(str_result, json_result);
+				CHECK_SERVER_ERR(json_result);
+			}
+			catch (exception &e)
+			{
+			 	Logger::write_log("<get_trades> Error ! %s", e.what());
+				status = binanceErrorParsingServerResponse;
+			}
+		}
+
+		Logger::write_log("<get_trades> Done.");
+	}
+
+	return status;
+}
+
 
 // Old trade lookup (MARKET_DATA)
 //
@@ -181,7 +251,7 @@ binanceError_t binance::Account::getHistoricalTrades(Json::Value &json_result, c
 		string post_data = "";
 
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -270,7 +340,7 @@ binanceError_t binance::Account::getTrades(const char *symbol, int limit, long f
 		string post_data = "";
 
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -343,7 +413,7 @@ binanceError_t binance::Account::getOpenOrders(Json::Value &json_result, long re
 		Logger::write_log("<get_openOrders> url = |%s|", url.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -418,7 +488,7 @@ binanceError_t binance::Account::getOpenOrders(Json::Value &json_result, const c
 		Logger::write_log("<get_openOrders> url = |%s|", url.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -508,7 +578,7 @@ binanceError_t binance::Account::getAllOrders(Json::Value &json_result, const ch
 		Logger::write_log("<get_allOrders> url = |%s|", url.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -624,7 +694,7 @@ binanceError_t binance::Account::sendOrder(const char *symbol, const char *side,
 		Logger::write_log("<send_order> url = |%s|, post_data = |%s|", url.c_str(), post_data.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -715,7 +785,7 @@ binanceError_t binance::Account::getOrder(const char *symbol, long orderId, cons
 		Logger::write_log("<get_order> url = |%s|", url.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -809,7 +879,7 @@ binanceError_t binance::Account::cancelOrder(const char *symbol, long orderId, c
 		Logger::write_log("<send_order> url = |%s|, post_data = |%s|", url.c_str(), post_data.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -860,7 +930,7 @@ binanceError_t binance::Account::startUserDataStream(Json::Value &json_result)
 		string post_data = "";
 
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -913,7 +983,7 @@ binanceError_t binance::Account::keepUserDataStream(const char *listenKey)
 		Logger::write_log("<keep_userDataStream> url = |%s|, post_data = |%s|", url.c_str(), post_data.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -951,7 +1021,7 @@ binanceError_t binance::Account::closeUserDataStream(const char *listenKey)
 		Logger::write_log("<close_userDataStream> url = |%s|, post_data = |%s|", url.c_str(), post_data.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -1033,7 +1103,7 @@ binanceError_t binance::Account::withdraw(const char *asset, const char *address
 		Logger::write_log("<withdraw> url = |%s|, post_data = |%s|", url.c_str(), post_data.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -1136,7 +1206,7 @@ binanceError_t binance::Account::getDepositHistory(const char *asset, int istatu
 		Logger::write_log("<get_depostHistory> url = |%s|", url.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -1239,7 +1309,7 @@ binanceError_t binance::Account::getWithdrawHistory(const char *asset, int istat
 		Logger::write_log("<get_withdrawHistory> url = |%s|", url.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;
@@ -1315,7 +1385,7 @@ binanceError_t binance::Account::getDepositAddress(const char *asset, long recvW
 		Logger::write_log("<get_depositAddress> url = |%s|", url.c_str());
 	
 		string str_result;
-		getCurlWithHeader(url, str_result, extra_http_header, post_data, action);
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
 
 		if (str_result.size() == 0)
 			status = binanceErrorEmptyServerResponse;

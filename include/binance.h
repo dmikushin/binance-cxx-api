@@ -111,22 +111,36 @@ namespace binance
 
 	std::string toString(double val);
 
-	binanceError_t getCurl(std::string &url, std::string &result_json);
-
-	binanceError_t getCurlWithHeader(std::string &url, std::string &result_json,
-		std::vector <std::string> &extra_http_header, std::string &post_data, std::string &action);
-
-	size_t getCurlCb(void *content, size_t size, size_t nmemb, std::string *buffer);
-
-	class Market
+	class Server
 	{
 		const std::string hostname;
+		const bool simulation;
+		std::string sessionId;
 
 	public :
 
-		Market(const char* hostname = "https://api.binance.com");
+		Server(const char* hostname = "https://api.binance.com", bool simulation = false);
+		
+		const std::string& getHostname() const;
+		bool isSimulator() const;
+		
+		binanceError_t getTime(Json::Value &json_result);
+		binanceError_t setTime(const time_t time, unsigned int scale = 1);
 
-		binanceError_t getServerTime(Json::Value &json_result); 
+		static binanceError_t getCurl(std::string &result_json, const std::string& url);
+
+		static binanceError_t getCurlWithHeader(std::string& result_json, const std::string& url,
+			const std::vector<std::string>& extra_http_header, const std::string& post_data, const std::string& action);
+	};
+
+	class Market
+	{
+		const std::string& hostname;
+		const Server& server;
+
+	public :
+
+		Market(const binance::Server& server);
 
 		binanceError_t getAllPrices(Json::Value &json_result);
 		binanceError_t getPrice(const char *symbol, double& price);
@@ -147,7 +161,9 @@ namespace binance
 	// API + Secret keys required
 	class Account
 	{
-		const std::string hostname;
+		const std::string& hostname;
+		const Server& server;
+		
 		std::string api_key, secret_key;
 
 	public :
@@ -155,12 +171,14 @@ namespace binance
 		static const std::string default_api_key_path;
 		static const std::string default_secret_key_path;
 
-		Account(const char* hostname = "https://api.binance.com",
+		Account(const binance::Server& server,
 			const std::string api_key = "", const std::string secret_key = "");
 
 		bool keysAreSet() const;
 
 		binanceError_t getInfo(Json::Value &json_result, long recvWindow = 0);
+
+		binanceError_t getTrades(Json::Value &json_result, const char *symbol, int limit = -1);
 
 		binanceError_t getHistoricalTrades(Json::Value &json_result, const char *symbol, long fromId = -1, int limit = -1);
 
