@@ -53,7 +53,7 @@ int main()
 	Market market(server);
 	
 	// Klines / CandleStick
-	BINANCE_ERR_CHECK(market.getKlines("POEBTC", "1h", 10 , 0, 0, result));
+	BINANCE_ERR_CHECK(market.getKlines(result, "POEBTC", "1h", 0, 0, 10));
 
  	for (Json::Value::ArrayIndex i = 0 ; i < result.size() ; i++)
  	{

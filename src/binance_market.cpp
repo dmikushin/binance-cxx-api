@@ -81,7 +81,7 @@ binanceError_t binance::Market::getPrice(const char *symbol, double& price)
 
 // Get Best price/qty on the order book for all symbols.
 // GET /api/v1/ticker/allBookTickers
-binanceError_t binance::Market::getAllBookTickers( Json::Value &json_result)
+binanceError_t binance::Market::getAllBookTickers(Json::Value &json_result)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -116,7 +116,7 @@ binanceError_t binance::Market::getAllBookTickers( Json::Value &json_result)
 	return status;
 }
 
-binanceError_t binance::Market::getBookTicker(const char *symbol, Json::Value &json_result)
+binanceError_t binance::Market::getBookTicker(Json::Value &json_result, const char *symbol)
 {
 	Logger::write_log("<get_BookTickers>");
 
@@ -151,7 +151,7 @@ binanceError_t binance::Market::getBookTicker(const char *symbol, Json::Value &j
 // symbol	STRING		YES
 // limit	INT		NO		Default 100;max 100.
 //
-binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Value &json_result)
+binanceError_t binance::Market::getDepth(Json::Value &json_result, const char *symbol, int limit)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -205,7 +205,7 @@ binanceError_t binance::Market::getDepth(const char *symbol, int limit, Json::Va
 // endTime		LONG	NO		Timestamp in ms to get aggregate trades until INCLUSIVE.
 // limit		INT	NO		Default 500;max 500.
 //
-binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, time_t startTime, time_t endTime, int limit, Json::Value &json_result)
+binanceError_t binance::Market::getAggTrades(Json::Value &json_result, const char *symbol, int fromId, int limit)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -217,22 +217,72 @@ binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, tim
 	string querystring("symbol=");
 	querystring.append(symbol);
 
-	if (startTime != 0 && endTime != 0)
-	{
-		querystring.append("&startTime=");
-		querystring.append(to_string(startTime));
+	querystring.append("&fromId=");
+	querystring.append(to_string(fromId));
 
-		querystring.append("&endTime=");
-		querystring.append(to_string(endTime));
-	}
+	querystring.append("&limit=");
+	querystring.append(to_string(limit));
+
+	url.append(querystring);
+	Logger::write_log("<get_aggTrades> url = |%s|", url.c_str());
+
+	string str_result;
+	Server::getCurl(str_result, url);
+
+	if (str_result.size() == 0)
+		status = binanceErrorEmptyServerResponse;
 	else
 	{
-		querystring.append("&fromId=");
-		querystring.append(to_string(fromId));
-
-		querystring.append("&limit=");
-		querystring.append(to_string(limit));
+		try
+		{
+			Json::Reader reader;
+			json_result.clear();
+			reader.parse(str_result, json_result);
+			CHECK_SERVER_ERR(json_result);
+		}
+		catch (exception &e)
+		{
+		 	Logger::write_log("<get_aggTrades> Error ! %s", e.what());
+			status = binanceErrorParsingServerResponse;
+		}
 	}
+
+	Logger::write_log("<get_aggTrades> Done.");
+
+	return status;
+}
+
+// Get Aggregated Trades list
+//
+// GET /api/v1/aggTrades
+//
+// Name		Type	Mandatory	Description
+// symbol		STRING	YES
+// fromId		LONG	NO		ID to get aggregate trades from INCLUSIVE.
+// startTime	LONG	NO		Timestamp in ms to get aggregate trades from INCLUSIVE.
+// endTime		LONG	NO		Timestamp in ms to get aggregate trades until INCLUSIVE.
+// limit		INT	NO		Default 500;max 500.
+//
+binanceError_t binance::Market::getAggTrades(Json::Value &json_result, const char *symbol, time_t startTime, time_t endTime, int limit)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_aggTrades>");
+
+	string url(hostname);
+	url += "/api/v1/aggTrades?";
+
+	string querystring("symbol=");
+	querystring.append(symbol);
+
+	querystring.append("&startTime=");
+	querystring.append(to_string(startTime));
+
+	querystring.append("&endTime=");
+	querystring.append(to_string(endTime));
+
+	querystring.append("&limit=");
+	querystring.append(to_string(limit));
 
 	url.append(querystring);
 	Logger::write_log("<get_aggTrades> url = |%s|", url.c_str());
@@ -268,7 +318,7 @@ binanceError_t binance::Market::getAggTrades(const char *symbol, int fromId, tim
 // Name	Type	Mandatory	Description
 // symbol	STRING	YES
 //
-binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_result)
+binanceError_t binance::Market::get24hr(Json::Value &json_result, const char *symbol)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -316,11 +366,11 @@ binanceError_t binance::Market::get24hr(const char *symbol, Json::Value &json_re
 // Name		Type	Mandatory	Description
 // symbol		STRING	YES
 // interval	ENUM	YES
-// limit		INT		NO	Default 500;max 500.
 // startTime	LONG	NO
 // endTime		LONG	NO
+// limit		INT		NO	Default 500;max 500.
 //
-binanceError_t binance::Market::getKlines(const char *symbol, const char *interval, int limit, time_t startTime, time_t endTime, Json::Value &json_result)
+binanceError_t binance::Market::getKlines(Json::Value &json_result, const char *symbol, const char *interval, time_t startTime, time_t endTime, int limit)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -344,11 +394,9 @@ binanceError_t binance::Market::getKlines(const char *symbol, const char *interv
 		querystring.append(to_string(endTime));
 
 	}
-	else if (limit > 0)
-	{
-		querystring.append("&limit=");
-		querystring.append(to_string(limit));
-	}
+
+	querystring.append("&limit=");
+	querystring.append(to_string(limit));
 
 	url.append(querystring);
 	Logger::write_log("<get_klines> url = |%s|", url.c_str());

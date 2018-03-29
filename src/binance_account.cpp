@@ -157,11 +157,8 @@ binanceError_t binance::Account::getTrades(Json::Value &json_result, const char 
 		string querystring("symbol=");
 		querystring.append(symbol);
 	
-		if (limit != -1)
-		{
-			querystring.append("&limit=");
-			querystring.append(to_string(limit));
-		}
+		querystring.append("&limit=");
+		querystring.append(to_string(limit));
 
 		url.append(querystring);
 		vector <string> extra_http_header;
@@ -201,82 +198,6 @@ binanceError_t binance::Account::getTrades(Json::Value &json_result, const char 
 	return status;
 }
 
-
-// Old trade lookup (MARKET_DATA)
-//
-// GET /api/v1/historicalTrades
-//
-// Name	Type	Mandatory	Description
-// symbol	STRING	YES	
-// limit	INT	NO	Default 500; max 500.
-// fromId	LONG	NO	TradeId to fetch from. Default gets most recent trades.
-//
-binanceError_t binance::Account::getHistoricalTrades(Json::Value &json_result, const char *symbol, long fromId, int limit)
-{
-	binanceError_t status = binanceSuccess;
-
-	Logger::write_log("<get_historicalTrades>");
-
-	if (api_key.size() == 0 || secret_key.size() == 0)
-		status = binanceErrorMissingAccountKeys;
-	else
-	{
-		string url(hostname);
-		url += "/api/v1/historicalTrades?";
-
-		string querystring("symbol=");
-		querystring.append(symbol);
-	
-		if (fromId != -1)
-		{
-			querystring.append("&fromId=");
-			querystring.append(to_string(fromId));
-		}
-
-		if (limit != -1)
-		{
-			querystring.append("&limit=");
-			querystring.append(to_string(limit));
-		}
-
-		url.append(querystring);
-		vector <string> extra_http_header;
-		string header_chunk("X-MBX-APIKEY: ");
-		header_chunk.append(api_key);
-		extra_http_header.push_back(header_chunk);
-
-		Logger::write_log("<get_historicalTrades> url = |%s|", url.c_str());
-
-		string action = "GET";
-		string post_data = "";
-
-		string str_result;
-		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
-
-		if (str_result.size() == 0)
-			status = binanceErrorEmptyServerResponse;
-		else
-		{
-			try
-			{
-				Json::Reader reader;
-				json_result.clear();
-				reader.parse(str_result, json_result);
-				CHECK_SERVER_ERR(json_result);
-			}
-			catch (exception &e)
-			{
-			 	Logger::write_log("<get_historicalTrades> Error ! %s", e.what());
-				status = binanceErrorParsingServerResponse;
-			}
-		}
-
-		Logger::write_log("<get_historicalTrades> Done.");
-	}
-
-	return status;
-}
-
 // Get trades for a specific account and symbol. (SIGNED)
 //
 // GET /api/v3/myTrades
@@ -287,7 +208,7 @@ binanceError_t binance::Account::getHistoricalTrades(Json::Value &json_result, c
 // recvWindow	LONG	NO	
 // timestamp	LONG	YES
 //
-binanceError_t binance::Account::getTrades(const char *symbol, int limit, long fromId, long recvWindow, Json::Value &json_result)
+binanceError_t binance::Account::getTradesSigned(Json::Value &json_result, const char *symbol, long fromId, long recvWindow, int limit)
 {	
 	binanceError_t status = binanceSuccess;
 
@@ -303,13 +224,7 @@ binanceError_t binance::Account::getTrades(const char *symbol, int limit, long f
 		string querystring("symbol=");
 		querystring.append(symbol);
 
-		if (limit > 0)
-		{
-			querystring.append("&limit=");
-			querystring.append(to_string(limit));
-		}
-
-		if (fromId > 0)
+		if (fromId != -1)
 		{
 			querystring.append("&fromId=");
 			querystring.append(to_string(fromId));
@@ -320,6 +235,9 @@ binanceError_t binance::Account::getTrades(const char *symbol, int limit, long f
 			querystring.append("&recvWindow=");
 			querystring.append(to_string(recvWindow));
 		}
+
+		querystring.append("&limit=");
+		querystring.append(to_string(limit));
 
 		querystring.append("&timestamp=");
 		querystring.append(to_string(get_current_ms_epoch()));
@@ -361,6 +279,78 @@ binanceError_t binance::Account::getTrades(const char *symbol, int limit, long f
 	}
 
 	Logger::write_log("<get_myTrades> Done.\n");
+
+	return status;
+}
+
+// Old trade lookup (MARKET_DATA)
+//
+// GET /api/v1/historicalTrades
+//
+// Name	Type	Mandatory	Description
+// symbol	STRING	YES	
+// limit	INT	NO	Default 500; max 500.
+// fromId	LONG	NO	TradeId to fetch from. Default gets most recent trades.
+//
+binanceError_t binance::Account::getHistoricalTrades(Json::Value &json_result, const char *symbol, long fromId, int limit)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_historicalTrades>");
+
+	if (api_key.size() == 0 || secret_key.size() == 0)
+		status = binanceErrorMissingAccountKeys;
+	else
+	{
+		string url(hostname);
+		url += "/api/v1/historicalTrades?";
+
+		string querystring("symbol=");
+		querystring.append(symbol);
+	
+		if (fromId != -1)
+		{
+			querystring.append("&fromId=");
+			querystring.append(to_string(fromId));
+		}
+
+		querystring.append("&limit=");
+		querystring.append(to_string(limit));
+
+		url.append(querystring);
+		vector <string> extra_http_header;
+		string header_chunk("X-MBX-APIKEY: ");
+		header_chunk.append(api_key);
+		extra_http_header.push_back(header_chunk);
+
+		Logger::write_log("<get_historicalTrades> url = |%s|", url.c_str());
+
+		string action = "GET";
+		string post_data = "";
+
+		string str_result;
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
+
+		if (str_result.size() == 0)
+			status = binanceErrorEmptyServerResponse;
+		else
+		{
+			try
+			{
+				Json::Reader reader;
+				json_result.clear();
+				reader.parse(str_result, json_result);
+				CHECK_SERVER_ERR(json_result);
+			}
+			catch (exception &e)
+			{
+			 	Logger::write_log("<get_historicalTrades> Error ! %s", e.what());
+				status = binanceErrorParsingServerResponse;
+			}
+		}
+
+		Logger::write_log("<get_historicalTrades> Done.");
+	}
 
 	return status;
 }
@@ -620,9 +610,9 @@ binanceError_t binance::Account::getAllOrders(Json::Value &json_result, const ch
 // recvWindow			LONG		NO	
 // timestamp			LONG		YES	
 //
-binanceError_t binance::Account::sendOrder(const char *symbol, const char *side, const char *type,
-	const char *timeInForce, double quantity, double price, const char *newClientOrderId, double stopPrice,
-	double icebergQty, long recvWindow, Json::Value &json_result) 
+binanceError_t binance::Account::sendOrder(Json::Value &json_result, const char *symbol,
+	const char *side, const char *type, const char *timeInForce, double quantity, double price,
+	const char *newClientOrderId, double stopPrice, double icebergQty, long recvWindow) 
 {	
 	binanceError_t status = binanceSuccess;
 
@@ -730,8 +720,8 @@ binanceError_t binance::Account::sendOrder(const char *symbol, const char *side,
 // recvWindow			LONG	NO	
 // timestamp			LONG	YES	
 //
-binanceError_t binance::Account::getOrder(const char *symbol, long orderId, const char *origClientOrderId,
-	long recvWindow, Json::Value &json_result)
+binanceError_t binance::Account::getOrder(Json::Value &json_result, const char *symbol,
+	long orderId, const char *origClientOrderId, long recvWindow)
 {	
 	binanceError_t status = binanceSuccess;
 
@@ -821,8 +811,8 @@ binanceError_t binance::Account::getOrder(const char *symbol, long orderId, cons
 // recvWindow			LONG	NO	
 // timestamp			LONG	YES	
 //
-binanceError_t binance::Account::cancelOrder(const char *symbol, long orderId, const char *origClientOrderId,
-	const char *newClientOrderId, long recvWindow, Json::Value &json_result)
+binanceError_t binance::Account::cancelOrder(Json::Value &json_result, const char *symbol,
+	long orderId, const char *origClientOrderId, const char *newClientOrderId, long recvWindow)
 {
 	binanceError_t status = binanceSuccess;
 
@@ -1045,8 +1035,9 @@ binanceError_t binance::Account::closeUserDataStream(const char *listenKey)
 // recvWindow	LONG	NO	
 // timestamp	LONG	YES
 //
-binanceError_t binance::Account::withdraw(const char *asset, const char *address, const char *addressTag,
-	double amount, const char *name, long recvWindow, Json::Value &json_result) 
+binanceError_t binance::Account::withdraw(Json::Value &json_result,
+	const char *asset, const char *address, const char *addressTag,
+	double amount, const char *name, long recvWindow) 
 {	
 	binanceError_t status = binanceSuccess;
 
@@ -1140,8 +1131,8 @@ binanceError_t binance::Account::withdraw(const char *asset, const char *address
 // recvWindow	LONG	NO	
 // timestamp	LONG	YES	
 //
-binanceError_t binance::Account::getDepositHistory(const char *asset, int istatus, long startTime, long endTime,
-	long recvWindow, Json::Value &json_result) 
+binanceError_t binance::Account::getDepositHistory(Json::Value &json_result,
+	const char *asset, int istatus, long startTime, long endTime, long recvWindow) 
 {	
 	binanceError_t status = binanceSuccess;
 
@@ -1243,8 +1234,8 @@ binanceError_t binance::Account::getDepositHistory(const char *asset, int istatu
 // recvWindow	LONG	NO	
 // timestamp	LONG	YES	
 //
-binanceError_t binance::Account::getWithdrawHistory(const char *asset, int istatus, long startTime, long endTime,
-	long recvWindow, Json::Value &json_result) 
+binanceError_t binance::Account::getWithdrawHistory(Json::Value &json_result,
+	const char *asset, int istatus, long startTime, long endTime, long recvWindow) 
 {
 	binanceError_t status = binanceSuccess;
 
@@ -1343,7 +1334,7 @@ binanceError_t binance::Account::getWithdrawHistory(const char *asset, int istat
 // recvWindow	LONG	NO	
 // timestamp	LONG	YES	
 //
-binanceError_t binance::Account::getDepositAddress(const char *asset, long recvWindow, Json::Value &json_result) 
+binanceError_t binance::Account::getDepositAddress(Json::Value &json_result, const char *asset, long recvWindow) 
 {	
 	binanceError_t status = binanceSuccess;
 

@@ -146,16 +146,16 @@ namespace binance
 		binanceError_t getPrice(const char *symbol, double& price);
 
 		binanceError_t getAllBookTickers(Json::Value &json_result);
-		binanceError_t getBookTicker(const char *symbol, Json::Value &json_result);
+		binanceError_t getBookTicker(Json::Value &json_result, const char *symbol);
 
-		binanceError_t getDepth(const char *symbol, int limit, Json::Value &json_result);
-		binanceError_t getAggTrades(const char *symbol, int fromId, time_t startTime, time_t endTime,
-			int limit, Json::Value &json_result);
+		binanceError_t getDepth(Json::Value &json_result, const char *symbol, int limit = 100);
+		binanceError_t getAggTrades(Json::Value &json_result, const char *symbol, int fromId, int limit = 500);
+		binanceError_t getAggTrades(Json::Value &json_result, const char *symbol, time_t startTime, time_t endTime, int limit = 500);
 
-		binanceError_t get24hr(const char *symbol, Json::Value &json_result);
+		binanceError_t get24hr(Json::Value &json_result, const char *symbol);
 
-		binanceError_t getKlines(const char *symbol, const char *interval, int limit,
-			time_t startTime, time_t endTime, Json::Value &json_result);
+		binanceError_t getKlines(Json::Value &json_result, const char *symbol, const char *interval,
+			time_t startTime = 0, time_t endTime = 0, int limit = 500);
 	};
 
 	// API + Secret keys required
@@ -178,12 +178,12 @@ namespace binance
 
 		binanceError_t getInfo(Json::Value &json_result, long recvWindow = 0);
 
-		binanceError_t getTrades(Json::Value &json_result, const char *symbol, int limit = -1);
+		binanceError_t getTrades(Json::Value &json_result, const char *symbol, int limit = 500);
 
-		binanceError_t getHistoricalTrades(Json::Value &json_result, const char *symbol, long fromId = -1, int limit = -1);
+		binanceError_t getTradesSigned(Json::Value &json_result, const char *symbol, long fromId = -1,
+			long recvWindow = 0, int limit = 500);
 
-		binanceError_t getTrades(const char *symbol, int limit, long fromId,
-			long recvWindow, Json::Value &json_result);
+		binanceError_t getHistoricalTrades(Json::Value &json_result, const char *symbol, long fromId = -1, int limit = 500);
 
 		binanceError_t getOpenOrders(Json::Value &json_result, long recvWindow = 0);
 
@@ -192,15 +192,15 @@ namespace binance
 		binanceError_t getAllOrders(Json::Value &json_result, const char *symbol,
 			long orderId = 0, int limit = 0, long recvWindow = 0);
 
-		binanceError_t sendOrder(const char *symbol, const char *side, const char *type, const char *timeInForce,
-			double quantity, double price, const char *newClientOrderId, double stopPrice, double icebergQty,
-			long recvWindow, Json::Value &json_result);
+		binanceError_t sendOrder(Json::Value &json_result, const char *symbol, const char *side, const char *type,
+			const char *timeInForce, double quantity, double price, const char *newClientOrderId, double stopPrice,
+			double icebergQty, long recvWindow);
 
-		binanceError_t getOrder(const char *symbol, long orderId, const char *origClientOrderId,
-			long recvWindow, Json::Value &json_result);
+		binanceError_t getOrder(Json::Value &json_result, const char *symbol,
+			long orderId, const char *origClientOrderId, long recvWindow);
 
-		binanceError_t cancelOrder(const char *symbol, long orderId, const char *origClientOrderId, const char *newClientOrderId,
-			long recvWindow, Json::Value &json_result);
+		binanceError_t cancelOrder(Json::Value &json_result, const char *symbol,
+			long orderId, const char *origClientOrderId, const char *newClientOrderId, long recvWindow);
 
 		// API key required
 		binanceError_t startUserDataStream(Json::Value &json_result);
@@ -208,16 +208,17 @@ namespace binance
 		binanceError_t closeUserDataStream(const char *listenKey);
 
 		// WAPI
-		binanceError_t withdraw(const char *asset, const char *address, const char *addressTag,
-			double amount, const char *name, long recvWindow, Json::Value &json_result);
+		binanceError_t withdraw(Json::Value &json_result,
+			const char *asset, const char *address, const char *addressTag,
+			double amount, const char *name, long recvWindow);
 
-		binanceError_t getDepositHistory(const char *asset, int status, long startTime, long endTime,
-			long recvWindow, Json::Value &json_result);
+		binanceError_t getDepositHistory(Json::Value &json_result,
+			const char *asset, int status, long startTime, long endTime, long recvWindow);
 
-		binanceError_t getWithdrawHistory(const char *asset, int status, long startTime, long endTime,
-			long recvWindow, Json::Value &json_result);
+		binanceError_t getWithdrawHistory(Json::Value &json_result,
+			const char *asset, int status, long startTime, long endTime, long recvWindow);
 
-		binanceError_t getDepositAddress(const char *asset, long recvWindow, Json::Value &json_result);
+		binanceError_t getDepositAddress(Json::Value &json_result, const char *asset, long recvWindow);
 	};
 }
 
