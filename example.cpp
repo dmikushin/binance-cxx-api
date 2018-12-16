@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "binance.h"
+#include "binance_logger.h"
 #include "binance_websocket.h"
 
 using namespace binance;
@@ -46,12 +47,15 @@ static int ws_klines_onData(Json::Value& json_result)
 
 int main()
 {
+	Logger::set_debug_level(1);
+	Logger::set_debug_logfp(stderr);
+
 	Json::Value result;
 
 	Server server;
 	
 	Market market(server);
-	
+		
 	// Klines / CandleStick
 	BINANCE_ERR_CHECK(market.getKlines(result, "POEBTC", "1h", 0, 0, 10));
 

@@ -27,32 +27,34 @@ struct lws_protocols binance::Websocket::protocols[] =
 
 map<struct lws*, CB> binance::Websocket::handles;
 
-int binance::Websocket::event_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+int binance::Websocket::event_cb(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
-	switch( reason )
+	char errbuf[256];
+
+	switch (reason)
 	{
 	case LWS_CALLBACK_CLIENT_ESTABLISHED :
 		lws_callback_on_writable( wsi );
 		break;
 
 	case LWS_CALLBACK_CLIENT_RECEIVE :
-		
-		/* Handle incomming messages here. */
-		try
 		{
-			// Logger::write_log("%p %s",  wsi, (char *)in );
+			// Handle incomming messages here.
+			try
+			{
+				string str_result = string( (char*)in );
+				Json::Reader reader;
+				Json::Value json_result;	
+				reader.parse( str_result , json_result );
 
-			string str_result = string( (char*)in );
-			Json::Reader reader;
-			Json::Value json_result;	
-			reader.parse( str_result , json_result );
-
-			if ( handles.find( wsi ) != handles.end() )
-				handles[wsi]( json_result );
-		}
-		catch ( exception &e )
-		{
-	 		Logger::write_log( "<binance::Websocket::event_cb> Error ! %s", e.what() ); 
+				if ( handles.find( wsi ) != handles.end() )
+					handles[wsi]( json_result );
+			}
+			catch ( exception &e )
+			{
+		 		Logger::write_log( "<binance::Websocket::event_cb> Error parsing incoming message : %s", e.what() );
+		 		return 1;
+			}
 		}   	
 		break;
 
@@ -60,38 +62,49 @@ int binance::Websocket::event_cb( struct lws *wsi, enum lws_callback_reasons rea
 		break;
 
 	case LWS_CALLBACK_CLOSED :
+		{
+			if ( handles.find( wsi ) != handles.end() )
+				handles.erase(wsi);
+	 	}
+		break;
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR :
-		if ( handles.find( wsi ) != handles.end() )
-			handles.erase(wsi);
+		{
+			if ( handles.find( wsi ) != handles.end() )
+				handles.erase(wsi);
+	 		Logger::write_log( "<binance::Websocket::event_cb> LWS_CALLBACK_CLIENT_CONNECTION_ERROR\n");
+	 	}
 		break;
 	}
 
 	return 0;
 }
 
-void binance::Websocket::init( ) 
+void binance::Websocket::init()
 {
 	struct lws_context_creation_info info;
-	memset( &info, 0, sizeof(info) );
+	memset(&info, 0, sizeof(info));
 
 	info.port = CONTEXT_PORT_NO_LISTEN;
 	info.protocols = protocols;
 	info.gid = -1;
 	info.uid = -1;
-	info.options = 0;
 
-	context = lws_create_context( &info );
+	// This option is needed here to imply LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT
+	// option, which must be set on newer versions of OpenSSL.
+	info.options = LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT;
+
+	context = lws_create_context(&info);
 }
 
 
 // Register call backs
-void binance::Websocket::connect_endpoint( CB cb, const char *path ) 
+void binance::Websocket::connect_endpoint(CB cb, const char* path)
 {
 	char ws_path[1024];
-	strcpy( ws_path, path );
+	strcpy(ws_path, path);
 	
-	/* Connect if we are not connected to the server. */
-	struct lws_client_connect_info ccinfo = {0};
+	// Connect if we are not connected to the server.
+	struct lws_client_connect_info ccinfo = { 0 };
 	ccinfo.context 	= context;
 	ccinfo.address 	= BINANCE_WS_HOST;
 	ccinfo.port 	= BINANCE_WS_PORT;
@@ -108,19 +121,19 @@ void binance::Websocket::connect_endpoint( CB cb, const char *path )
 // Entering event loop
 void binance::Websocket::enter_event_loop()
 {
-	while( 1 )
+	while (1)
 	{	
 		try
 		{	
-			lws_service( context, 500 );
+			lws_service(context, 500);
 		}
-		catch ( exception &e ) 
+		catch (exception &e) 
 		{
-		 	Logger::write_log( "<binance::Websocket::enter_event_loop> Error ! %s", e.what() ); 
+		 	Logger::write_log("<binance::Websocket::enter_event_loop> Error ! %s", e.what());
 		 	break;
 		}
 	}
 
-	lws_context_destroy( context );
+	lws_context_destroy(context);
 }
 

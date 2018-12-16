@@ -25,12 +25,12 @@ namespace binance
 		static struct lws_context *context;
 		static struct lws_protocols protocols[]; 
 
-		static std::map<struct lws *, CB> handles ;
+		static std::map<struct lws *, CB> handles;
 	
 	public:
 
-		static int  event_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len );
-		static void connect_endpoint( CB user_cb, const char* path );
+		static int event_cb(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+		static void connect_endpoint(CB user_cb, const char* path);
 		static void init();
 		static void enter_event_loop();
 	};
