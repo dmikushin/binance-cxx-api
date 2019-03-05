@@ -427,3 +427,83 @@ binanceError_t binance::Market::getKlines(Json::Value &json_result, const char *
 	return status;
 }
 
+// Get Exchange information
+//GET /api/v1/exchangeInfo
+binanceError_t binance::Market::getExchangeInfo(Json::Value &json_result)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_exchangeInfo>");
+
+	string url(hostname);
+	url += "/api/v1/exchangeInfo";
+
+	string str_result;
+	Server::getCurl(str_result, url);
+
+	if (str_result.size() == 0)
+		status = binanceErrorEmptyServerResponse;
+	else
+	{
+		try
+		{
+			Json::Reader reader;
+			json_result.clear();
+			reader.parse(str_result, json_result);
+			CHECK_SERVER_ERR(json_result);
+		}
+		catch (exception &e)
+		{
+			Logger::write_log("<get_exchangeInfo> Error ! %s", e.what());
+			status = binanceErrorParsingServerResponse;
+		}
+	}
+
+	Logger::write_log("<get_exchangeInfo> Done.");
+
+	return status;
+}
+
+//LOT_SIZE
+//The LOT_SIZE filter defines the quantity (aka "lots" in auction terms) rules for a symbol. There are 3 parts:
+//minQty defines the minimum quantity/icebergQty allowed.
+//maxQty defines the maximum quantity/icebergQty allowed.
+//stepSize defines the intervals that a quantity/icebergQty can be increased/decreased by.
+//In order to pass the lot size, the following must be true for quantity/icebergQty:
+//quantity >= minQty
+//quantity <= maxQty
+//(quantity-minQty) % stepSize == 0
+binanceError_t binance::Market::getLotSize(const char *symbol, double& maxQty, double& minQty, double& stepSize)
+{
+	Logger::write_log("<get_lotSize>");
+
+	Json::Value exchangeInfo;
+	string str_symbol = string_toupper(symbol);
+	binanceError_t status = getExchangeInfo(exchangeInfo);
+	CHECK_SERVER_ERR(exchangeInfo);
+
+	if (status == binanceSuccess)
+	{
+		status = binanceErrorInvalidSymbol;
+		
+		for (int i = 0;i < exchangeInfo["symbols"].size();i++)
+		{
+			if (exchangeInfo["symbols"][i]["symbol"].asString() == str_symbol)
+			{
+				for(int j=0;j < exchangeInfo["symbols"][i]["filters"].size(); j++) {
+					if (exchangeInfo["symbols"][i]["filters"][j]["filterType"].asString() == "LOT_SIZE") {
+						maxQty = atof(exchangeInfo["symbols"][i]["filters"][j]["maxQty"].asString().c_str());
+						minQty = atof(exchangeInfo["symbols"][i]["filters"][j]["minQty"].asString().c_str());
+						stepSize = atof(exchangeInfo["symbols"][i]["filters"][j]["stepSize"].asString().c_str());
+						status = binanceSuccess;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	Logger::write_log("<get_lotSize> Done.");
+
+	return status;
+}
