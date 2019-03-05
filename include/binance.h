@@ -156,6 +156,9 @@ namespace binance
 
 		binanceError_t getKlines(Json::Value &json_result, const char *symbol, const char *interval,
 			time_t startTime = 0, time_t endTime = 0, int limit = 500);
+		
+		binanceError_t getExchangeInfo(Json::Value &json_result);
+		binanceError_t getLotSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
 	};
 
 	// API + Secret keys required
