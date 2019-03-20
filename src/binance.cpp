@@ -45,6 +45,9 @@ const char* binance::binanceGetErrorString(const binanceError_t err)
 	BINANCE_CASE_STR(binanceErrorCurlFailed);
 	BINANCE_CASE_STR(binanceErrorCurlOutOfMemory);
 	}
+
+	static const string str_binanceErrorUnknown = "binanceErrorUnknown";
+	return str_binanceErrorUnknown.c_str();
 }
 
 std::string binance::toString(double val)
