@@ -39,6 +39,7 @@ cd binance-cxx-api
 mkdir build
 cd build/
 cmake ..
+make
 ./example
 ```
 
