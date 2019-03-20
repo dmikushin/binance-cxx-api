@@ -75,7 +75,7 @@ int main()
  		
  	// Klines/Candlestick update via websocket
  	Websocket::init();
- 	Websocket::connect_endpoint(ws_klines_onData ,"/ws/poebtc@kline_1m"); 
+ 	Websocket::connect_endpoint(ws_klines_onData, "/ws/poebtc@kline_1m"); 
 	Websocket::enter_event_loop();
 	
 	return 0;

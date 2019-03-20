@@ -23,7 +23,6 @@ namespace binance
 	class Websocket
 	{
 		static struct lws_context *context;
-		static struct lws_protocols protocols[]; 
 
 		static std::map<struct lws *, CB> handles;
 	
