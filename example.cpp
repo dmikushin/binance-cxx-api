@@ -42,7 +42,9 @@ static int ws_klines_onData(Json::Value& json_result)
 	klinesCache[start_of_candle]["c"] = atof(json_result["k"]["c"].asString().c_str());
 	klinesCache[start_of_candle]["v"] = atof(json_result["k"]["v"].asString().c_str());
 	
-	print_klinesCache();	
+	print_klinesCache();
+	
+	return 0;
 }
 
 int main()
