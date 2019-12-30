@@ -98,9 +98,9 @@ void binance::Logger::set_debug_level( int level )
 	debug_level = level;
 }
 
-void binance::Logger::set_debug_logfile( string &pDebug_log_file ) 
+void binance::Logger::set_debug_logfp( FILE* fp ) 
 {
-	debug_log_file = pDebug_log_file;
+	log_fp = fp;
 }
 
 void binance::Logger::enable_logfile( int pDebug_log_file_enable ) 

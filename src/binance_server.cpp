@@ -29,7 +29,7 @@ binanceError_t binance::Server::getTime(Json::Value &json_result)
 	url += "/api/v1/time";
 
 	string str_result;
-	getCurl(url, str_result);
+	getCurl(str_result, url);
 
 	if (str_result.size() == 0)
 		status = binanceErrorEmptyServerResponse;

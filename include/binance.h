@@ -98,6 +98,7 @@ namespace binance
 		binanceErrorMissingAccountKeys,
 		binanceErrorCurlFailed,
 		binanceErrorCurlOutOfMemory,
+		binanceErrorUnknown,
 	};
 
 	const char* binanceGetErrorString(const binanceError_t err);
