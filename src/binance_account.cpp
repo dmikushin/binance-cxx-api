@@ -134,7 +134,7 @@ binanceError_t binance::Account::getInfo(Json::Value &json_result, long recvWind
 
 // Recent trades list
 //
-// GET /api/v1/trades
+// GET /api/v3/trades
 // Get recent trades (up to last 500).
 //
 // Name	Type	Mandatory	Description
@@ -152,7 +152,7 @@ binanceError_t binance::Account::getTrades(Json::Value &json_result, const char 
 	else
 	{
 		string url(hostname);
-		url += "/api/v1/trades?";
+		url += "/api/v3/trades?";
 
 		string querystring("symbol=");
 		querystring.append(symbol);
@@ -285,7 +285,7 @@ binanceError_t binance::Account::getTradesSigned(Json::Value &json_result, const
 
 // Old trade lookup (MARKET_DATA)
 //
-// GET /api/v1/historicalTrades
+// GET /api/v3/historicalTrades
 //
 // Name	Type	Mandatory	Description
 // symbol	STRING	YES	
@@ -303,7 +303,7 @@ binanceError_t binance::Account::getHistoricalTrades(Json::Value &json_result, c
 	else
 	{
 		string url(hostname);
-		url += "/api/v1/historicalTrades?";
+		url += "/api/v3/historicalTrades?";
 
 		string querystring("symbol=");
 		querystring.append(symbol);
@@ -636,14 +636,20 @@ binanceError_t binance::Account::sendOrder(Json::Value &json_result, const char 
 		post_data.append("&type=");
 		post_data.append(type);
 
-		post_data.append("&timeInForce=");
-		post_data.append(timeInForce);
+		if (strlen(timeInForce) > 0)
+		{
+			post_data.append("&timeInForce=");
+			post_data.append(timeInForce);
+		}
 
 		post_data.append("&quantity=");
 		post_data.append(toString(quantity));
 
-		post_data.append("&price=");
-		post_data.append(toString(price));
+		if (price > 0.0)
+		{
+			post_data.append("&price=");
+			post_data.append(toString(price));
+		}
 
 		if (strlen(newClientOrderId) > 0)
 		{
@@ -906,7 +912,7 @@ binanceError_t binance::Account::startUserDataStream(Json::Value &json_result)
 	else
 	{
 		string url(hostname);
-		url += "/api/v1/userDataStream";
+		url += "/api/v3/userDataStream";
 
 		vector <string> extra_http_header;
 		string header_chunk("X-MBX-APIKEY: ");
@@ -957,7 +963,7 @@ binanceError_t binance::Account::keepUserDataStream(const char *listenKey)
 	else
 	{
 		string url(hostname);
-		url += "/api/v1/userDataStream";
+		url += "/api/v3/userDataStream";
 
 		vector <string> extra_http_header;
 		string header_chunk("X-MBX-APIKEY: ");
@@ -996,7 +1002,7 @@ binanceError_t binance::Account::closeUserDataStream(const char *listenKey)
 	else
 	{
 		string url(hostname);
-		url += "/api/v1/userDataStream";
+		url += "/api/v3/userDataStream";
 
 		vector <string> extra_http_header;
 		string header_chunk("X-MBX-APIKEY: ");
@@ -1027,7 +1033,8 @@ binanceError_t binance::Account::closeUserDataStream(const char *listenKey)
 // POST /wapi/v3/withdraw.html
 //
 // Name		Type	Mandatory	Description
-// asset		STRING	YES	
+// asset	STRING	YES
+// network	STRING	NO
 // address		STRING	YES	
 // addressTag	STRING	NO	Secondary address identifier for coins like XRP,XMR etc.
 // amount		DECIMAL	YES	
@@ -1036,7 +1043,7 @@ binanceError_t binance::Account::closeUserDataStream(const char *listenKey)
 // timestamp	LONG	YES
 //
 binanceError_t binance::Account::withdraw(Json::Value &json_result,
-	const char *asset, const char *address, const char *addressTag,
+	const char *asset, const char *network, const char *address, const char *addressTag,
 	double amount, const char *name, long recvWindow) 
 {	
 	binanceError_t status = binanceSuccess;
@@ -1054,7 +1061,13 @@ binanceError_t binance::Account::withdraw(Json::Value &json_result,
 	
 		string post_data("asset=");
 		post_data.append(asset);
-	
+
+		if (strlen(network) > 0)
+		{
+			post_data.append("&network=");
+			post_data.append(network);
+		}
+
 		post_data.append("&address=");
 		post_data.append(address);
 
