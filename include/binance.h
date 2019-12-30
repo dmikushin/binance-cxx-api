@@ -145,6 +145,7 @@ namespace binance
 
 		binanceError_t getAllPrices(Json::Value &json_result);
 		binanceError_t getPrice(const char *symbol, double& price);
+		binanceError_t getPriceTick(const char *symbol, double& askPrice, double& bidPrice, double& askQty, double& bidQty);
 
 		binanceError_t getAllBookTickers(Json::Value &json_result);
 		binanceError_t getBookTicker(Json::Value &json_result, const char *symbol);
@@ -154,9 +155,16 @@ namespace binance
 		binanceError_t getAggTrades(Json::Value &json_result, const char *symbol, time_t startTime, time_t endTime, int limit = 500);
 
 		binanceError_t get24hr(Json::Value &json_result, const char *symbol);
+		binanceError_t get24hrTick(const char *symbol, double& lastPrice,
+		double& askPrice, double& askQty, double& bidPrice, double& bidQty,
+		double& highPrice, double& lowPrice, double& priceChangePercent, double& quoteVolume);
 
 		binanceError_t getKlines(Json::Value &json_result, const char *symbol, const char *interval,
 			time_t startTime = 0, time_t endTime = 0, int limit = 500);
+		binanceError_t getExchangeInfo(Json::Value &json_result);
+		binanceError_t getExchangeInfoLocaly(Json::Value &json_result);
+		binanceError_t getLotSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
+		binanceError_t getTickSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
 	};
 
 	// API + Secret keys required
@@ -210,7 +218,7 @@ namespace binance
 
 		// WAPI
 		binanceError_t withdraw(Json::Value &json_result,
-			const char *asset, const char *address, const char *addressTag,
+			const char *asset, const char *network, const char *address, const char *addressTag,
 			double amount, const char *name, long recvWindow);
 
 		binanceError_t getDepositHistory(Json::Value &json_result,

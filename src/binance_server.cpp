@@ -18,7 +18,7 @@ const std::string& binance::Server::getHostname() const { return hostname; }
 
 bool binance::Server::isSimulator() const { return simulation; }
 
-// GET /api/v1/time
+// GET /api/v3/time
 binanceError_t binance::Server::getTime(Json::Value &json_result)
 {
 	binanceError_t status = binanceSuccess;
@@ -26,7 +26,7 @@ binanceError_t binance::Server::getTime(Json::Value &json_result)
 	Logger::write_log("<get_serverTime>");
 
 	string url(hostname);
-	url += "/api/v1/time";
+	url += "/api/v3/time";
 
 	string str_result;
 	getCurl(str_result, url);
