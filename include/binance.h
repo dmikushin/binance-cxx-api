@@ -205,6 +205,10 @@ namespace binance
 			const char *timeInForce, double quantity, double price, const char *newClientOrderId, double stopPrice,
 			double icebergQty, long recvWindow);
 
+		binanceError_t sendTestOrder(Json::Value &json_result, const char *symbol, const char *side, const char *type,
+			const char *timeInForce, double quantity, double price, const char *newClientOrderId, double stopPrice,
+			double icebergQty, long recvWindow);
+
 		binanceError_t getOrder(Json::Value &json_result, const char *symbol,
 			long orderId, const char *origClientOrderId, long recvWindow);
 
