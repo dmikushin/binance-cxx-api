@@ -26,6 +26,5 @@ target_link_libraries(${PROJECT_NAME} jsoncpp curl websockets)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(example example.cpp)
-target_include_directories(example PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/libwebsockets/include")
 target_link_libraries(example ${PROJECT_NAME})
 

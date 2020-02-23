@@ -8,10 +8,7 @@
 #ifndef BINANCE_WEBSOCKET_H
 #define BINANCE_WEBSOCKET_H
 
-#include <map>
-
 #include <jsoncpp/json/json.h>
-#include <libwebsockets.h>
 
 #define BINANCE_WS_HOST "stream.binance.com"
 #define BINANCE_WS_PORT 9443
@@ -21,14 +18,8 @@ namespace binance
 	typedef int (*CB)( Json::Value &json_value );
 
 	class Websocket
-	{
-		static lws_context *context;
-
-		static std::map<lws *, CB> handles;
-	
-	public:
-
-		static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+	{	
+	public :
 		static void connect_endpoint(CB user_cb, const char* path);
 		static void init();
 		static void enter_event_loop();

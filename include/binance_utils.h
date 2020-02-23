@@ -10,10 +10,7 @@
 
 #include <unistd.h>
 #include <string>
-#include <sstream>
 #include <vector>
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
 
 namespace binance
 {

@@ -9,32 +9,19 @@
 #include "binance_logger.h"
 
 #include <atomic>
+#include <libwebsockets.h>
+#include <map>
 
 using namespace binance;
 using namespace std;
 
+static lws_context* context = NULL;
+static map<lws*, CB> handles;
+
 static atomic<int> lws_service_cancelled(0);
 
-lws_context *binance::Websocket::context = NULL;
-
-const lws_protocols protocols[] =
+static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
-	{
-		.name = "binance-websocket-api",
-		.callback = binance::Websocket::event_cb,
-		.per_session_data_size = 0,
-		.rx_buffer_size = 65536,
-	},
-	
-	{ NULL, NULL, 0, 0 } /* end */
-};
-
-map<lws*, CB> binance::Websocket::handles;
-
-int binance::Websocket::event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
-{
-	char errbuf[256];
-
 	switch (reason)
 	{
 	case LWS_CALLBACK_CLIENT_ESTABLISHED :
@@ -92,6 +79,18 @@ cancel :
 	atomic_store(&lws_service_cancelled, 1);
 	return -1;
 }
+
+const lws_protocols protocols[] =
+{
+	{
+		.name = "binance-websocket-api",
+		.callback = event_cb,
+		.per_session_data_size = 0,
+		.rx_buffer_size = 65536,
+	},
+	
+	{ NULL, NULL, 0, 0 } /* end */
+};
 
 void binance::Websocket::init()
 {

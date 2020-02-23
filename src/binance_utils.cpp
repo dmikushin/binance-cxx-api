@@ -9,6 +9,9 @@
 
 #include <cstring>
 #include <sys/time.h>
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
+#include <sstream>
 
 using namespace std;
 
