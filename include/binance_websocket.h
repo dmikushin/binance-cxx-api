@@ -22,13 +22,13 @@ namespace binance
 
 	class Websocket
 	{
-		static struct lws_context *context;
+		static lws_context *context;
 
-		static std::map<struct lws *, CB> handles;
+		static std::map<lws *, CB> handles;
 	
 	public:
 
-		static int event_cb(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
+		static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
 		static void connect_endpoint(CB user_cb, const char* path);
 		static void init();
 		static void enter_event_loop();

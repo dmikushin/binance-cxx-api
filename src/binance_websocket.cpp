@@ -15,9 +15,9 @@ using namespace std;
 
 static atomic<int> lws_service_cancelled(0);
 
-struct lws_context *binance::Websocket::context = NULL;
+lws_context *binance::Websocket::context = NULL;
 
-const struct lws_protocols protocols[] =
+const lws_protocols protocols[] =
 {
 	{
 		.name = "binance-websocket-api",
@@ -29,9 +29,9 @@ const struct lws_protocols protocols[] =
 	{ NULL, NULL, 0, 0 } /* end */
 };
 
-map<struct lws*, CB> binance::Websocket::handles;
+map<lws*, CB> binance::Websocket::handles;
 
-int binance::Websocket::event_cb(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+int binance::Websocket::event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
 	char errbuf[256];
 
@@ -95,7 +95,7 @@ cancel :
 
 void binance::Websocket::init()
 {
-	struct lws_context_creation_info info;
+	lws_context_creation_info info;
 	memset(&info, 0, sizeof(info));
 
 	info.port = CONTEXT_PORT_NO_LISTEN;
@@ -117,7 +117,7 @@ void binance::Websocket::connect_endpoint(CB cb, const char* path)
 	strcpy(ws_path, path);
 	
 	// Connect if we are not connected to the server.
-	struct lws_client_connect_info ccinfo = { 0 };
+	lws_client_connect_info ccinfo = { 0 };
 	ccinfo.context 	= context;
 	ccinfo.address 	= BINANCE_WS_HOST;
 	ccinfo.port 	= BINANCE_WS_PORT;
@@ -127,7 +127,7 @@ void binance::Websocket::connect_endpoint(CB cb, const char* path)
 	ccinfo.protocol = protocols[0].name;
 	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
-	struct lws* conn = lws_client_connect_via_info(&ccinfo);
+	lws* conn = lws_client_connect_via_info(&ccinfo);
 	handles[conn] = cb;
 }
 
