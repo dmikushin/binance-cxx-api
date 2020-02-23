@@ -28,13 +28,13 @@ This version is derived from https://github.com/binance-exchange/binacpp with sl
 ### Prerequisites
 
 ```
-sudo apt-get install libjsoncpp-dev libcurl4-nss-dev libwebsockets-dev
+sudo apt-get install libjsoncpp-dev libcurl4-nss-dev
 ```
 
 ### Building
 
 ```
-git clone https://github.com/dmikushin/binance-cxx-api.git
+git clone --recurse-submodules https://github.com/dmikushin/binance-cxx-api.git
 cd binance-cxx-api
 mkdir build
 cd build/
