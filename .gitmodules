@@ -1,0 +1,3 @@
+[submodule "ThirdParty/libwebsockets"]
+	path = ThirdParty/libwebsockets
+	url = https://libwebsockets.org/repo/libwebsockets

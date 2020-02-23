@@ -17,12 +17,16 @@ static atomic<int> lws_service_cancelled(0);
 
 struct lws_context *binance::Websocket::context = NULL;
 
-struct lws_protocols protocol =
+const struct lws_protocols protocols[] =
 {
-	.name = "binance-websocket-api",
-	.callback = binance::Websocket::event_cb,
-	.per_session_data_size = 0,
-	.rx_buffer_size = 65536,
+	{
+		.name = "binance-websocket-api",
+		.callback = binance::Websocket::event_cb,
+		.per_session_data_size = 0,
+		.rx_buffer_size = 65536,
+	},
+	
+	{ NULL, NULL, 0, 0 } /* end */
 };
 
 map<struct lws*, CB> binance::Websocket::handles;
@@ -79,23 +83,6 @@ int binance::Websocket::event_cb(struct lws *wsi, enum lws_callback_reasons reas
 	 		Logger::write_log("<binance::Websocket::event_cb> LWS_CALLBACK_CLIENT_CONNECTION_ERROR\n");
 	 	}
 		goto cancel;
-	case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS :
-		return 1;
-	case LWS_CALLBACK_LOCK_POLL :
-	case LWS_CALLBACK_ADD_POLL_FD :
-	case LWS_CALLBACK_DEL_POLL_FD :
-	case LWS_CALLBACK_UNLOCK_POLL :
-	case LWS_CALLBACK_WSI_CREATE :
-	case LWS_CALLBACK_WSI_DESTROY :
-	case LWS_CALLBACK_CHANGE_MODE_POLL_FD :
-	case LWS_CALLBACK_PROTOCOL_INIT :
-	case LWS_CALLBACK_PROTOCOL_DESTROY :
-		break;
-	default :
-		{
-	 		Logger::write_log("<binance::Websocket::event_cb> unhandled callback reason = %d\n", reason);
-		}
-		goto cancel;
 	}
 
 	return 0;
@@ -112,7 +99,7 @@ void binance::Websocket::init()
 	memset(&info, 0, sizeof(info));
 
 	info.port = CONTEXT_PORT_NO_LISTEN;
-	info.protocols = &protocol;
+	info.protocols = protocols;
 	info.gid = -1;
 	info.uid = -1;
 
@@ -122,16 +109,6 @@ void binance::Websocket::init()
 
 	context = lws_create_context(&info);
 }
-
-enum lws_client_connect_ssl_connection_flags
-{
-	LCCSCF_USE_SSL                          = (1 << 0),
-	LCCSCF_ALLOW_SELFSIGNED                 = (1 << 1),
-	LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK  = (1 << 2),
-	LCCSCF_ALLOW_EXPIRED                    = (1 << 3),
-
-	LCCSCF_PIPELINE                         = (1 << 16),
-};
 
 // Register call backs
 void binance::Websocket::connect_endpoint(CB cb, const char* path)
@@ -147,7 +124,7 @@ void binance::Websocket::connect_endpoint(CB cb, const char* path)
 	ccinfo.path 	= ws_path;
 	ccinfo.host 	= lws_canonical_hostname(context);
 	ccinfo.origin 	= "origin";
-	ccinfo.protocol = protocol.name;
+	ccinfo.protocol = protocols[0].name;
 	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
 	struct lws* conn = lws_client_connect_via_info(&ccinfo);
