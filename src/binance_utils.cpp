@@ -9,8 +9,8 @@
 
 #include <cstring>
 #include <sys/time.h>
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/md.h>
 #include <sstream>
 
 using namespace std;
@@ -93,17 +93,18 @@ unsigned long binance::get_current_ms_epoch( )
 string binance::hmac_sha256( const char *key, const char *data)
 {
 	unsigned char* digest;
-	digest = HMAC(EVP_sha256(), key, strlen(key), (unsigned char*)data, strlen(data), NULL, NULL);	
+	mbedtls_md_hmac( mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ),
+		reinterpret_cast<const unsigned char*>(key), strlen(key),
+		reinterpret_cast<const unsigned char*>(data), strlen(data),
+		digest );
 	return b2a_hex( (char *)digest, 32 );
-}   
+}
 
 string binance::sha256( const char *data )
 {
 	unsigned char digest[32];
-	SHA256_CTX sha256;
-	SHA256_Init(&sha256);
-	SHA256_Update(&sha256, data, strlen(data) );
-	SHA256_Final(digest, &sha256);
+	mbedtls_sha256_ret( reinterpret_cast<const unsigned char*>(data),
+		strlen(data), digest, 0 );
 	return b2a_hex( (char *)digest, 32 );	
 }
 

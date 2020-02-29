@@ -8,7 +8,7 @@
 #ifndef BINANCE_WEBSOCKET_H
 #define BINANCE_WEBSOCKET_H
 
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 
 #define BINANCE_WS_HOST "stream.binance.com"
 #define BINANCE_WS_PORT 9443

@@ -60,7 +60,10 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 		goto cancel;
 	case LWS_CALLBACK_GET_THREAD_ID:
 		{
-			return pthread_self();
+			auto tid = pthread_self();
+			int result = 0;
+			memcpy(&result, &tid, sizeof(result));
+			return result;
 		}
 		break;
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR :
@@ -70,6 +73,9 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 	 		Logger::write_log("<binance::Websocket::event_cb> LWS_CALLBACK_CLIENT_CONNECTION_ERROR\n");
 	 	}
 		goto cancel;
+	default :
+		// Make compiler happy regarding unhandled enums.
+		break;
 	}
 
 	return 0;

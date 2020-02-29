@@ -44,6 +44,9 @@ const char* binance::binanceGetErrorString(const binanceError_t err)
 	BINANCE_CASE_STR(binanceErrorMissingAccountKeys);
 	BINANCE_CASE_STR(binanceErrorCurlFailed);
 	BINANCE_CASE_STR(binanceErrorCurlOutOfMemory);
+	default :
+		// Make compiler happy regarding unhandled enums.
+		break;
 	}
 
 	static const string str_binanceErrorUnknown = "binanceErrorUnknown";

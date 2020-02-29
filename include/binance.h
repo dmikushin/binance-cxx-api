@@ -17,7 +17,15 @@
 #include <unistd.h>
 
 #include <curl/curl.h>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
+
+#ifndef HOST_NAME_MAX
+# if defined(_POSIX_HOST_NAME_MAX)
+#  define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+# elif defined(MAXHOSTNAMELEN)
+#  define HOST_NAME_MAX MAXHOSTNAMELEN
+# endif
+#endif /* HOST_NAME_MAX */
 
 #define CHECK_SERVER_ERR(result)                                     \
     do {                                                             \

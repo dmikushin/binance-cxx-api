@@ -1,3 +1,9 @@
+[submodule "ThirdParty/jsoncpp"]
+	path = ThirdParty/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "ThirdParty/mbedtls"]
+	path = ThirdParty/mbedtls
+	url = https://github.com/ARMmbed/mbedtls.git
 [submodule "ThirdParty/libwebsockets"]
 	path = ThirdParty/libwebsockets
-	url = https://libwebsockets.org/repo/libwebsockets
+	url = https://github.com/dmikushin/libwebsockets.git
