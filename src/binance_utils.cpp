@@ -92,7 +92,7 @@ unsigned long binance::get_current_ms_epoch( )
 
 string binance::hmac_sha256( const char *key, const char *data)
 {
-	unsigned char* digest;
+	unsigned char digest[32];
 	mbedtls_md_hmac( mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ),
 		reinterpret_cast<const unsigned char*>(key), strlen(key),
 		reinterpret_cast<const unsigned char*>(data), strlen(data),
