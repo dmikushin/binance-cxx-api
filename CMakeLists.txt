@@ -26,6 +26,9 @@ set(MBEDTLS_LIBRARIES mbedtls)
 set(MBEDTLS_INCLUDE_DIRS
 	${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include
 	${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/crypto/include)
+set_property(TARGET mbedtls PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET mbedx509 PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET mbedcrypto PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 option(LWS_STATIC_PIC "" ON)
 option(LWS_WITH_SSL "" OFF)
