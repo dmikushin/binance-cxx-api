@@ -63,11 +63,12 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 #ifdef __APPLE__
 			// On OS X pthread_threadid_np() is used, as pthread_self() returns a structure.
 			// Note the _np suffix suggests that it is an extension to POSIX.
-			auto tid = pthread_getthreadid_np();
+			uint64_t tid;
+			pthread_threadid_np(NULL, &tid);
 #else
 			auto tid = pthread_self();
 #endif
-			return (int)(unsigned long long)tid;
+			return (int)(uint64_t)tid;
 		}
 		break;
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR :
