@@ -11,8 +11,6 @@ set(CMAKE_CXX_STANDARD 11)
 # Search path for CMake include files.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-find_package(CURL REQUIRED)
-
 set(JSONCPP_WITH_TESTS OFF CACHE BOOL "")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/jsoncpp EXCLUDE_FROM_ALL)
 set_property(TARGET jsoncpp_lib_static PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -22,13 +20,27 @@ set(JSONCPP_LIBRARIES jsoncpp_lib_static)
 
 set(ENABLE_TESTING "" OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls EXCLUDE_FROM_ALL)
-set(MBEDTLS_LIBRARIES mbedtls)
+set(MBEDCRYPTO_LIBRARY mbedcrypto)
+set(MBEDTLS_LIBRARY mbedtls)
+set(MBEDX509_LIBRARY mbedx509)
+set(MBEDTLS_LIBRARIES ${MBEDCRYPTO_LIBRARY} ${MBEDTLS_LIBRARY} ${MBEDX509_LIBRARY})
 set(MBEDTLS_INCLUDE_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include
-	${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/crypto/include)
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include"
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/crypto/include")
 set_property(TARGET mbedtls PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET mbedx509 PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET mbedcrypto PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+option(BUILD_CURL_EXE "" OFF)
+option(BUILD_SHARED_LIBS "" OFF)
+option(BUILD_TESTING "" OFF)
+option(CMAKE_USE_MBEDTLS "" ON)
+option(CURL_WITH_EXPORT_TARGETS "" OFF)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/curl EXCLUDE_FROM_ALL)
+set_property(TARGET libcurl PROPERTY POSITION_INDEPENDENT_CODE ON)
+set(CURL_INCLUDE_DIRS
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/curl/include")
+set(CURL_LIBRARIES libcurl)
 
 option(LWS_STATIC_PIC "" ON)
 option(LWS_WITH_SSL "" OFF)
@@ -46,7 +58,7 @@ add_library(${PROJECT_NAME} SHARED ${LIBRARY_SRC})
 target_include_directories(${PROJECT_NAME} PRIVATE "${LIBWEBSOCKETS_INCLUDE_DIRS}")
 target_include_directories(${PROJECT_NAME} PRIVATE "${JSONCPP_INCLUDE_DIRS}")
 target_include_directories(${PROJECT_NAME} PRIVATE "${MBEDTLS_INCLUDE_DIRS}")
-target_link_libraries(${PROJECT_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${JSONCPP_LIBRARIES} curl)
+target_link_libraries(${PROJECT_NAME} ${LIBWEBSOCKETS_LIBRARIES} ${JSONCPP_LIBRARIES} ${CURL_LIBRARIES})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 

@@ -28,7 +28,7 @@ This version is derived from https://github.com/binance-exchange/binacpp with sl
 ### Prerequisites
 
 ```
-sudo apt-get install libcurl4-nss-dev
+sudo apt-get install cmake g++
 ```
 
 ### Building
