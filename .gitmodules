@@ -9,4 +9,4 @@
 	url = https://github.com/dmikushin/libwebsockets.git
 [submodule "ThirdParty/curl"]
 	path = ThirdParty/curl
-	url = https://github.com/curl/curl.git
+	url = https://github.com/dmikushin/curl.git
