@@ -20,9 +20,9 @@ set(JSONCPP_LIBRARIES jsoncpp_lib_static)
 
 set(ENABLE_TESTING "" OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls EXCLUDE_FROM_ALL)
-set(MBEDCRYPTO_LIBRARY mbedcrypto)
-set(MBEDTLS_LIBRARY mbedtls)
-set(MBEDX509_LIBRARY mbedx509)
+set(MBEDCRYPTO_LIBRARY $<TARGET_FILE:mbedcrypto>)
+set(MBEDTLS_LIBRARY    $<TARGET_FILE:mbedtls>)
+set(MBEDX509_LIBRARY   $<TARGET_FILE:mbedx509>)
 set(MBEDTLS_LIBRARIES ${MBEDCRYPTO_LIBRARY} ${MBEDTLS_LIBRARY} ${MBEDX509_LIBRARY})
 set(MBEDTLS_INCLUDE_DIRS
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include"
@@ -35,7 +35,6 @@ option(BUILD_CURL_EXE "" OFF)
 option(BUILD_SHARED_LIBS "" OFF)
 option(BUILD_TESTING "" OFF)
 option(CMAKE_USE_MBEDTLS "" ON)
-option(CURL_WITH_EXPORT_TARGETS "" OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/curl EXCLUDE_FROM_ALL)
 set_property(TARGET libcurl PROPERTY POSITION_INDEPENDENT_CODE ON)
 set(CURL_INCLUDE_DIRS
@@ -50,7 +49,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/libwebsockets EXCLUDE_FR
 set(LIBWEBSOCKETS_LIBRARIES websockets)
 set(LIBWEBSOCKETS_INCLUDE_DIRS
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/libwebsockets/include"
-	"${CMAKE_CURRENT_BINARY_DIR}/ThirdParty/libwebsockets/include")
+	"${CMAKE_CURRENT_BINARY_DIR}/ThirdParty/libwebsockets")
 
 file(GLOB_RECURSE LIBRARY_SRC "src/*.cpp" "include/*.h")
 
