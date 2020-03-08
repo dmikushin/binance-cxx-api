@@ -20,9 +20,11 @@ set(JSONCPP_LIBRARIES jsoncpp_lib_static)
 
 set(ENABLE_TESTING "" OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls EXCLUDE_FROM_ALL)
-set(MBEDCRYPTO_LIBRARY $<TARGET_FILE:mbedcrypto>)
-set(MBEDTLS_LIBRARY    $<TARGET_FILE:mbedtls>)
-set(MBEDX509_LIBRARY   $<TARGET_FILE:mbedx509>)
+# During the initial CMake run, the mbed targets do not exist yet. Once the
+# program is linked, it will become available.
+set(MBEDCRYPTO_LIBRARY $<$<TARGET_EXISTS:mbedcrypto>:$<TARGET_FILE:mbedcrypto>>)
+set(MBEDTLS_LIBRARY    $<$<TARGET_EXISTS:mbedtls>:$<TARGET_FILE:mbedtls>>)
+set(MBEDX509_LIBRARY   $<$<TARGET_EXISTS:mbedx509>:$<TARGET_FILE:mbedx509>>)
 set(MBEDTLS_LIBRARIES ${MBEDCRYPTO_LIBRARY} ${MBEDTLS_LIBRARY} ${MBEDX509_LIBRARY})
 set(MBEDTLS_INCLUDE_DIRS
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include"
