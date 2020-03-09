@@ -20,18 +20,35 @@ set(JSONCPP_LIBRARIES jsoncpp_lib_static)
 
 set(ENABLE_TESTING "" OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls EXCLUDE_FROM_ALL)
-# During the initial CMake run, the mbed targets do not exist yet. Once the
-# program is linked, it will become available.
-set(MBEDCRYPTO_LIBRARY $<$<TARGET_EXISTS:mbedcrypto>:$<TARGET_FILE:mbedcrypto>>)
-set(MBEDTLS_LIBRARY    $<$<TARGET_EXISTS:mbedtls>:$<TARGET_FILE:mbedtls>>)
-set(MBEDX509_LIBRARY   $<$<TARGET_EXISTS:mbedx509>:$<TARGET_FILE:mbedx509>>)
-set(MBEDTLS_LIBRARIES ${MBEDCRYPTO_LIBRARY} ${MBEDTLS_LIBRARY} ${MBEDX509_LIBRARY})
+
+# Decorating mbedcrypto/mbedtls/mbedx509 targets to avoid the following type of errors:
+# CMake Error: install(EXPORT "CURLTargets" ...) includes target "libcurl" which requires target "mbedtls"
+# libcurl prefers not to add an option to disable exporting, which would actually be easier.
+
+add_library(mbedcrypto::mbedcrypto INTERFACE IMPORTED)
+set_target_properties(mbedcrypto::mbedcrypto PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/crypto/include")
+target_link_libraries(mbedcrypto::mbedcrypto INTERFACE mbedcrypto)
+set(MBEDCRYPTO_LIBRARY mbedcrypto::mbedcrypto)
+set_property(TARGET mbedcrypto PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+add_library(mbedtls::mbedtls INTERFACE IMPORTED)
+set_target_properties(mbedtls::mbedtls PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include")
+target_link_libraries(mbedtls::mbedtls INTERFACE mbedtls)
+set(MBEDTLS_LIBRARY mbedtls::mbedtls)
+set_property(TARGET mbedtls PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+add_library(mbedx509::mbedx509 INTERFACE IMPORTED)
+set_target_properties(mbedx509::mbedx509 PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include")
+target_link_libraries(mbedx509::mbedx509 INTERFACE mbedtls)
+set(MBEDX509_LIBRARY mbedx509::mbedx509)
+set_property(TARGET mbedx509 PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 set(MBEDTLS_INCLUDE_DIRS
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/include"
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls/crypto/include")
-set_property(TARGET mbedtls PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET mbedx509 PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET mbedcrypto PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_CURL_EXE "" OFF)
 option(BUILD_SHARED_LIBS "" OFF)
