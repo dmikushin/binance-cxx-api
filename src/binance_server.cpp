@@ -79,6 +79,25 @@ binanceError_t binance::Server::getCurl(string& result_json, const string& url)
 	return getCurlWithHeader(result_json, url, v, post_data, action);
 }
 
+class SmartCURL
+{
+	CURL* curl;
+
+public :
+
+	CURL* get() { return curl; }
+
+	SmartCURL()
+	{
+		curl = curl_easy_init();
+	}
+
+	~SmartCURL()
+	{
+		curl_easy_cleanup(curl);
+	}
+};
+
 // Do the curl
 binanceError_t binance::Server::getCurlWithHeader(string& str_result, 
 	const string& url, const vector<string>& extra_http_header, const string& post_data, const string& action)
@@ -87,14 +106,20 @@ binanceError_t binance::Server::getCurlWithHeader(string& str_result,
 	
 	Logger::write_log("<curl_api>");
 
-	CURL* curl = curl_easy_init();
+	SmartCURL curl;
 
-	if (curl)
+	while (curl.get())
 	{
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, getCurlCb);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &str_result);
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
+		curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
+		curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, getCurlCb);
+		curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &str_result);
+		curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, false);
+		if (curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, true) != CURLE_OK)
+		{
+			Logger::write_log("<curl_api> curl_easy_setopt(CURLOPT_SSL_VERIFYPEER) is not supported");
+			status = binanceErrorCurlFailed;
+			break;
+		}
 
 		if (extra_http_header.size() > 0)
 		{
@@ -102,21 +127,21 @@ binanceError_t binance::Server::getCurlWithHeader(string& str_result,
 			for (int i = 0; i < extra_http_header.size(); i++)
 				chunk = curl_slist_append(chunk, extra_http_header[i].c_str());
 
- 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+ 			curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, chunk);
  		}
 
  		if (post_data.size() > 0 || action == "POST" || action == "PUT" || action == "DELETE")
  		{
  			if (action == "PUT" || action == "DELETE")
- 				curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, action.c_str());
- 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
+ 				curl_easy_setopt(curl.get(), CURLOPT_CUSTOMREQUEST, action.c_str());
+ 			curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_data.c_str());
  		}
 
 		CURLcode res;
 
 		try
 		{
-			res = curl_easy_perform(curl);
+			res = curl_easy_perform(curl.get());
 		}
 		catch (std::bad_alloc &e)
 		{
@@ -133,8 +158,7 @@ binanceError_t binance::Server::getCurlWithHeader(string& str_result,
 			}
 		}
 
-		// Always cleanup.
-		curl_easy_cleanup(curl);
+		break;
 	}
 
 	Logger::write_log("<curl_api> Done.");
