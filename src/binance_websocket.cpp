@@ -142,15 +142,17 @@ void binance::Websocket::connect_endpoint(CB cb, const char* path)
 }
 
 // Entering event loop
-void binance::Websocket::enter_event_loop()
+void binance::Websocket::enter_event_loop(std::chrono::hours hours)
 {
-	while (1)
-	{	
-		lws_service(context, 500);
+    auto start = std::chrono::steady_clock::now();
+    auto end = start + hours;
+    do {
+        using namespace std::chrono;
 
-		if (lws_service_cancelled)
-			break;
-	}
+        lws_service(context, 500);
+        if (lws_service_cancelled)
+            break;
+    } while (std::chrono::steady_clock::now() < end);
 
 	atomic_store(&lws_service_cancelled, 0);
 

@@ -9,6 +9,7 @@
 #define BINANCE_WEBSOCKET_H
 
 #include <json/json.h>
+#include <chrono>
 
 #define BINANCE_WS_HOST "stream.binance.com"
 #define BINANCE_WS_PORT 9443
@@ -22,7 +23,7 @@ namespace binance
 	public :
 		static void connect_endpoint(CB user_cb, const char* path);
 		static void init();
-		static void enter_event_loop();
+		static void enter_event_loop(std::chrono::hours hours = std::chrono::hours(24));
 	};
 }
 

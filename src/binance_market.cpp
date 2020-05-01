@@ -177,6 +177,41 @@ binanceError_t binance::Market::getTickSize(const char *symbol, double& maxPrice
 	return status;
 }
 
+binanceError_t binance::Market::getMinNotional(const char *symbol, double& minNotional)
+{
+    Logger::write_log("<get_MinNotional>");
+
+    Json::Value exchangeInfo;
+    string str_symbol = string_toupper(symbol);
+    binanceError_t status = getExchangeInfoLocaly(exchangeInfo);
+    CHECK_SERVER_ERR(exchangeInfo);
+
+    if (status == binanceSuccess)
+    {
+        status = binanceErrorInvalidSymbol;
+
+        for (int i = 0;i < exchangeInfo["symbols"].size();i++)
+        {
+            if (exchangeInfo["symbols"][i]["symbol"].asString() == str_symbol)
+            {
+                for(int j=0;j < exchangeInfo["symbols"][i]["filters"].size(); j++) {
+
+                    if (exchangeInfo["symbols"][i]["filters"][j]["filterType"].asString() == "MIN_NOTIONAL") {
+                        minNotional = atof(exchangeInfo["symbols"][i]["filters"][j]["minNotional"].asString().c_str());
+                        status = binanceSuccess;
+                        break;
+                    }
+
+                }
+            }
+        }
+    }
+
+    Logger::write_log("<get_MinNotional> Done.");
+
+    return status;
+}
+
 // Get Latest price for all symbols.
 // GET /api/v1/ticker/allPrices
 binanceError_t binance::Market::getAllPrices(Json::Value &json_result)
