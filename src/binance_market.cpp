@@ -179,7 +179,7 @@ binanceError_t binance::Market::getTickSize(const char *symbol, double& maxPrice
 
 binanceError_t binance::Market::getMinNotional(const char *symbol, double& minNotional)
 {
-    Logger::write_log("<get_lotSize>");
+    Logger::write_log("<get_MinNotional>");
 
     Json::Value exchangeInfo;
     string str_symbol = string_toupper(symbol);
@@ -207,7 +207,7 @@ binanceError_t binance::Market::getMinNotional(const char *symbol, double& minNo
         }
     }
 
-    Logger::write_log("<get_lotSize> Done.");
+    Logger::write_log("<get_MinNotional> Done.");
 
     return status;
 }
