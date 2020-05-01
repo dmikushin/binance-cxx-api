@@ -173,6 +173,7 @@ namespace binance
 		binanceError_t getExchangeInfoLocaly(Json::Value &json_result);
 		binanceError_t getLotSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
 		binanceError_t getTickSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
+		binanceError_t getMinNotional(const char *symbol, double& minNotional);
 	};
 
 	// API + Secret keys required
