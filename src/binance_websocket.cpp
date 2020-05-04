@@ -33,7 +33,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 			// Handle incomming messages here.
 			try
 			{
-				string str_result = string((char*)in);
+				string str_result = string(reinterpret_cast<char*>(in), len);
 				Json::Reader reader;
 				Json::Value json_result;	
 				reader.parse(str_result , json_result);
