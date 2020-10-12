@@ -21,8 +21,7 @@ namespace binance
 	class Websocket
 	{	
 	public :
-          static void connect_endpoint(CB user_cb, const char *path,
-                                       const char *host = BINANCE_WS_HOST);
+          static void connect_endpoint(CB user_cb, const char *path);
           static void init();
           static void
           enter_event_loop(std::chrono::hours hours = std::chrono::hours(24));
