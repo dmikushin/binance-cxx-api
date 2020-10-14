@@ -21,13 +21,13 @@ static struct lws_context *context;
 static unordered_map<lws*, CB> handles;
 static lws_sorted_usec_list_t _sul;
 static atomic<int> lws_service_cancelled(0);
-static void connect_client(lws_sorted_usec_list_t *sul);
+void connect_client(lws_sorted_usec_list_t *sul);
 
 /*
  * This "contains" the endpoint connection proprty and has
  * the connection bound to it
  */
-static struct endpoint_connection {
+struct endpoint_connection {
 	lws_sorted_usec_list_t	sul; /* schedule connection retry */
 	struct lws		*wsi;	     /* related wsi if any */
 	uint16_t		retry_count; /* count of consequetive retries */
@@ -39,7 +39,7 @@ static struct endpoint_connection {
 /*
  * The retry and backoff policy we want to use for our client connections
  */
-static const uint32_t backoff_ms[] = { 1000, 1000*2, 1000*3, 1000*4, 1000*5};
+const uint32_t backoff_ms[] = { 1000, 1000*2, 1000*3, 1000*4, 1000*5};
 
 /*
  * This struct sets the policy for delays between retries,
@@ -47,10 +47,10 @@ static const uint32_t backoff_ms[] = { 1000, 1000*2, 1000*3, 1000*4, 1000*5};
  * before it first tries to ping / pong on it to confirm it's up,
  * or drops the connection if still idle.
  */
-static const lws_retry_bo_t retry = {
+const lws_retry_bo_t retry = {
 	.retry_ms_table			= backoff_ms,
 	.retry_ms_table_count		= LWS_ARRAY_SIZE(backoff_ms),
-	.conceal_count			= LWS_ARRAY_SIZE(backoff_ms)*2,
+	.conceal_count			= LWS_ARRAY_SIZE(backoff_ms),
 	.secs_since_valid_ping		= 30, /* force PINGs after secs idle */
 	.secs_since_valid_hangup	= 60, /* hangup after secs idle */
 	.jitter_percent			= 15,
@@ -73,7 +73,7 @@ static const lws_retry_bo_t retry = {
  * permessage-deflate reduces the data size before the tls layer, for >100mps
  * reducing the colesced records to ~1.2KB.
  */
-static const struct lws_extension extensions[] = {
+const struct lws_extension extensions[] = {
 	{
 		"permessage-deflate",
 		lws_extension_callback_pm_deflate,
@@ -84,7 +84,7 @@ static const struct lws_extension extensions[] = {
 	{ NULL, NULL, NULL /* terminator */ }
 };
 
-static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
 	struct endpoint_connection *endpoint_prop = (struct endpoint_connection *)user;
 
@@ -169,8 +169,8 @@ do_retry:
 				handles.erase(wsi);
 			lws_cancel_service(lws_get_context(wsi));
 			lwsl_err("%s: connection attempts exhausted\n", __func__);
-			atomic_store(&lws_service_cancelled, 0);
-			return 0;
+			atomic_store(&lws_service_cancelled, 1);
+			return -1;
 		}
 	}catch (exception &e)
 	{
@@ -182,7 +182,7 @@ do_retry:
 	return 0;
 }
 
-static const lws_protocols protocols[] =
+const lws_protocols protocols[] =
 	{
 		{
 			.name = "binance-websocket-api",
@@ -194,7 +194,7 @@ static const lws_protocols protocols[] =
 		{ NULL, NULL, 0, 0 } /* end */
 	};
 
-static void
+void
 sigint_handler(int sig)
 {
 	Logger::write_log("<binance::Websocket::sigint_handler> Interactive attention signal : %d\n", sig);
@@ -204,7 +204,7 @@ sigint_handler(int sig)
 /*
  * Scheduled sul callback that starts the connection attempt
  */
-static void connect_client(lws_sorted_usec_list_t *sul)
+void connect_client(lws_sorted_usec_list_t *sul)
 {
 	struct endpoint_connection *endpoint_prop = lws_container_of(&_sul, struct endpoint_connection, sul);
 	struct lws_client_connect_info ccinfo;
