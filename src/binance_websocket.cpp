@@ -61,30 +61,6 @@ const lws_retry_bo_t retry = {
 	 */
 };
 
-/*
- * If we don't enable permessage-deflate ws extension, during times when there
- * are many ws messages per second the server coalesces them inside a smaller
- * number of larger ssl records, for >100 mps typically >2048 records.
- *
- * This is a problem, because the coalesced record cannot be send nor decrypted
- * until the last part of the record is received, meaning additional latency
- * for the earlier members of the coalesced record that have just been sitting
- * there waiting for the last one to go out and be decrypted.
- *
- * permessage-deflate reduces the data size before the tls layer, for >100mps
- * reducing the colesced records to ~1.2KB.
- */
-const struct lws_extension extensions[] = {
-	{
-		"permessage-deflate",
-		lws_extension_callback_pm_deflate,
-		"permessage-deflate"
-		"; client_no_context_takeover"
-		"; client_max_window_bits"
-	},
-	{ NULL, NULL, NULL /* terminator */ }
-};
-
 int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
 	int m;
@@ -92,16 +68,18 @@ int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, s
 	switch (reason)
 	{
 		case LWS_CALLBACK_CLIENT_ESTABLISHED :
+			pthread_mutex_lock(&lock_concurrent);
 			for (std::pair<int, int> n : concurrent) {
 				if (endpoints_prop[n.second].wsi == wsi) {
 					lws_callback_on_writable(wsi);
 					m = n.second;
-					endpoints_prop[m].wsi = wsi;
 					lwsl_user("%s: connection established with success concurrent:%d ws_path::%s\n",
 							 __func__, n.second, endpoints_prop[n.second].ws_path);
+					pthread_mutex_unlock(&lock_concurrent);
 					break;
 				}
 			}
+			pthread_mutex_unlock(&lock_concurrent);
 			break;
 
 		case LWS_CALLBACK_CLIENT_RECEIVE :
@@ -109,6 +87,7 @@ int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, s
 			// Handle incomming messages here.
 			try
 			{
+				pthread_mutex_lock(&lock_concurrent);
 				string str_result = string(reinterpret_cast<char*>(in), len);
 				Json::Reader reader;
 				Json::Value json_result;
@@ -121,12 +100,15 @@ int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, s
 						endpoints_prop[m].retry_count = 0;
 						lwsl_user("%s: incomming messages from %s\n",
 							__func__ , endpoints_prop[n.second].ws_path);
+						pthread_mutex_unlock(&lock_concurrent);	
 						break;
 					}
 				}
+				pthread_mutex_unlock(&lock_concurrent);
 			}
 			catch (exception &e)
 			{
+				pthread_mutex_unlock(&lock_concurrent);
 				Logger::write_log("<binance::Websocket::event_cb> Error parsing incoming message : %s\n", e.what());
 				return 1;
 			}
@@ -137,14 +119,17 @@ int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, s
 			break;
 
 		case LWS_CALLBACK_CLOSED :
+		    pthread_mutex_lock(&lock_concurrent);
 			lwsl_err("CALLBACK_CLOSED: %s\n",
 					 in ? (char *)in : "");
 			for (std::pair<int, int> n : concurrent) {
 				if (endpoints_prop[n.second].wsi == wsi) {
 					m = n.second;
+					pthread_mutex_unlock(&lock_concurrent);
 					goto do_retry;
 				}
 			}
+			pthread_mutex_unlock(&lock_concurrent);
 			break;
 
 		case LWS_CALLBACK_GET_THREAD_ID:
@@ -162,6 +147,7 @@ int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, s
 			break;
 
 		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR :
+		    pthread_mutex_lock(&lock_concurrent);
 			for (std::pair<int, int> n : concurrent) {
 				if (endpoints_prop[n.second].wsi == wsi) {
 					atomic_store(&lws_service_cancelled, 1);
@@ -169,20 +155,25 @@ int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, s
 					concurrent.erase(n.second);
 					lwsl_err("CLIENT_CONNECTION_ERROR Unknown WIS: %s\n",
 							 in ? (char *)in : "(null)");
+				    pthread_mutex_unlock(&lock_concurrent);
 					return -1;
 				}
 			}
+			pthread_mutex_unlock(&lock_concurrent);
 			break;
 
 		case LWS_CALLBACK_CLIENT_CLOSED:
+		    pthread_mutex_lock(&lock_concurrent);
 			lwsl_err("CLIENT_CALLBACK_CLIENT_CLOSED: %s\n",
 					 in ? (char *)in : "");
 			for (std::pair<int, int> n : concurrent) {
 				if (endpoints_prop[n.second].wsi == wsi) {
 					m = n.second;
+					pthread_mutex_unlock(&lock_concurrent);
 					goto do_retry;
 				}
 			}
+			pthread_mutex_unlock(&lock_concurrent);
 			break;
 
 		default :
@@ -198,9 +189,11 @@ do_retry:
 											 &endpoints_prop[m].retry_count))
 		{
 			if(endpoints_prop[m].retry_count > (LWS_ARRAY_SIZE(backoff_ms))){
+				pthread_mutex_lock(&lock_concurrent);
 				endpoints_prop.erase(m);
 				concurrent.erase(m);
 				atomic_store(&lws_service_cancelled, 1);
+				pthread_mutex_unlock(&lock_concurrent);
 				return -1;
 			}
 			{
@@ -311,7 +304,6 @@ void binance::Websocket::init()
 	info.uid = -1;
 	info.protocols = protocols;
 	info.fd_limit_per_thread = 0;
-	info.extensions = extensions;
 
 	context = lws_create_context(&info);
 	if (!context) {
