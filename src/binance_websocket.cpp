@@ -299,6 +299,7 @@ void connect_client(lws_sorted_usec_list_t *sul)
 
 void binance::Websocket::init()
 {
+	pthread_mutex_init(&lock_concurrent, NULL);
 	struct lws_context_creation_info info;
 	signal(SIGINT, sigint_handler);
 	memset(&info, 0, sizeof(info));
@@ -367,4 +368,6 @@ void binance::Websocket::enter_event_loop(std::chrono::hours hours)
 	atomic_store(&lws_service_cancelled, 1);
 
 	lws_context_destroy(context);
+	
+	pthread_mutex_destroy(&lock_concurrent);
 }
