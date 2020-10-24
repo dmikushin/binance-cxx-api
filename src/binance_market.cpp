@@ -41,9 +41,16 @@ binanceError_t binance::Market::getExchangeInfo(Json::Value &json_result)
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_exchangeInfo> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -109,10 +116,17 @@ binanceError_t binance::Market::getExchangeInfoLocaly(Json::Value &json_result)
     {
         try
         {
-            Json::Reader reader;
-            json_result.clear();
-            reader.parse(str_result, json_result);
-            CHECK_SERVER_ERR(json_result);
+			json_result.clear();
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<getExchangeInfoLocaly> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
+			CHECK_SERVER_ERR(json_result);
         }
         catch (exception &e)
         {
@@ -263,9 +277,16 @@ binanceError_t binance::Market::getAllPrices(Json::Value &json_result)
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_allPrices> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -306,11 +327,18 @@ binanceError_t binance::Market::getPrice(const char *symbol, double& price)
     {
         try
         {
-            Json::Reader reader;
-            json_result.clear();
-            reader.parse(str_result, json_result);
-            CHECK_SERVER_ERR(json_result);
-            price = atof(json_result["price"].asString().c_str());
+			json_result.clear();
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_price> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
+			CHECK_SERVER_ERR(json_result);
+			price = atof(json_result["price"].asString().c_str());
         }
         catch (exception &e)
         {
@@ -350,10 +378,17 @@ binanceError_t binance::Market::getPriceTick(const char *symbol, double& askPric
     {
         try
         {
-            Json::Reader reader;
-            json_result.clear();
-            reader.parse(str_result, json_result);
-            CHECK_SERVER_ERR(json_result);
+			json_result.clear();
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_PriceTick> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
+			CHECK_SERVER_ERR(json_result);
             bidPrice = atof(json_result["bidPrice"].asString().c_str());
             bidQty = atof(json_result["bidQty"].asString().c_str());
             askPrice = atof(json_result["askPrice"].asString().c_str());
@@ -391,9 +426,16 @@ binanceError_t binance::Market::getAllBookTickers(Json::Value &json_result)
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_allBookTickers> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -432,10 +474,17 @@ binanceError_t binance::Market::getBookTicker(Json::Value &json_result, const ch
     {
         try
         {
-            Json::Reader reader;
-            json_result.clear();
-            reader.parse(str_result, json_result);
-            CHECK_SERVER_ERR(json_result);
+			json_result.clear();
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_BookTicker> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
+			CHECK_SERVER_ERR(json_result);
         }
         catch (exception &e)
         {
@@ -483,9 +532,16 @@ binanceError_t binance::Market::getDepth(Json::Value &json_result, const char *s
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_depth> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -541,9 +597,16 @@ binanceError_t binance::Market::getAggTrades(Json::Value &json_result, const cha
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_aggTrades> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -602,9 +665,16 @@ binanceError_t binance::Market::getAggTrades(Json::Value &json_result, const cha
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_aggTrades> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -648,9 +718,16 @@ binanceError_t binance::Market::get24hr(Json::Value &json_result, const char *sy
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_24hr> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -692,10 +769,17 @@ binanceError_t binance::Market::get24hrTick(const char *symbol, double& lastPric
     {
         try
         {
-            Json::Reader reader;
-            json_result.clear();
-            reader.parse(str_result, json_result);
-            CHECK_SERVER_ERR(json_result);
+			json_result.clear();
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_24hr> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
+			CHECK_SERVER_ERR(json_result);
             lastPrice = atof(json_result["lastPrice"].asString().c_str());
             askPrice = atof(json_result["askPrice"].asString().c_str());
             askQty = atof(json_result["askQty"].asString().c_str());
@@ -772,9 +856,16 @@ binanceError_t binance::Market::getKlines(Json::Value &json_result, const char *
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_klines> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -813,9 +904,16 @@ binanceError_t binance::Market::getLastFundingRate(Json::Value &json_result, con
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_fundingRate> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)
@@ -852,9 +950,16 @@ binanceError_t binance::Market::getServerTime(Json::Value &json_result)
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_serverTime> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)

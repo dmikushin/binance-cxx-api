@@ -40,9 +40,16 @@ binanceError_t binance::Server::getTime(Json::Value &json_result)
 	{
 		try
 		{
-			Json::Reader reader;
 			json_result.clear();
-			reader.parse(str_result, json_result);
+			JSONCPP_STRING err;
+			Json::CharReaderBuilder builder;
+			const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+			if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+							   &err)) {
+				Logger::write_log("<get_serverTime> Error ! %s", err.c_str());
+				status = binanceErrorParsingServerResponse;
+				return status;
+			}
 			CHECK_SERVER_ERR(json_result);
 		}
 		catch (exception &e)

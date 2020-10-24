@@ -92,10 +92,17 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 					if (endpoints_prop[n.first].wsi == wsi && current_data->ws_path == endpoints_prop[n.first].ws_path) {
 						pthread_mutex_lock(&lock_concurrent);
 						string str_result = string(reinterpret_cast<const char*>(in), len);
-						Json::Reader reader;
 						Json::Value json_result;
-						reader.parse(str_result , json_result);
-						assert(!json_result.isNull());
+						JSONCPP_STRING err;
+						Json::CharReaderBuilder builder;
+						const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+						if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+										   &err)) {
+							lwsl_user("%s: LWS_CALLBACK_CLIENT_RECEIVE Error Json:%s\n",
+									  __func__, err.c_str());
+							pthread_mutex_unlock(&lock_concurrent);
+							break;
+						}
 						idx = n.first;
 						endpoints_prop[idx].json_cb(json_result);
 						endpoints_prop[idx].retry_count = 0;
