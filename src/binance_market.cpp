@@ -716,14 +716,16 @@ binanceError_t binance::Market::getKlines(Json::Value &json_result, const char *
 	querystring.append("&interval=");
 	querystring.append(interval);
 
-	if (startTime > 0 && endTime > 0)
+	if (startTime > 0)
 	{
 		querystring.append("&startTime=");
 		querystring.append(to_string(startTime));
+	}
 
+	if (endTime > 0)
+	{
 		querystring.append("&endTime=");
 		querystring.append(to_string(endTime));
-
 	}
 
 	querystring.append("&limit=");
