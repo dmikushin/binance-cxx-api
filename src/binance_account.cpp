@@ -1610,3 +1610,60 @@ binanceError_t binance::Account::getDepositAddress(Json::Value &json_result, con
 	return status;
 }
 
+binanceError_t binance::Account::getWalletData(Json::Value &json_result, long recvWindow)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_walletData>");
+
+	if (api_key.size() == 0 || secret_key.size() == 0)
+		status = binanceErrorMissingAccountKeys;
+	else
+	{
+		string url(hostname);
+		url += "/sapi/v1/capital/config/getall?";
+		string action = "GET";
+
+		string querystring("&timestamp=");
+		querystring.append(to_string(get_current_ms_epoch()));
+
+		if (recvWindow > 0)
+		{
+			querystring.append("&recvWindow=");
+			querystring.append(to_string(recvWindow));
+		}
+
+		string signature =  hmac_sha256(secret_key.c_str(), querystring.c_str());
+		querystring.append("&signature=");
+		querystring.append(signature);
+
+		url.append(querystring);
+
+		vector <string> extra_http_header;
+		string header_chunk("X-MBX-APIKEY: ");
+		header_chunk.append(api_key);
+		extra_http_header.push_back(header_chunk);
+
+		string post_data = "";
+
+		Logger::write_log("<get_walletData> url = |%s|", url.c_str());
+
+		string str_result;
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
+
+		if (str_result.size() == 0) {
+			status = binanceErrorEmptyServerResponse;
+		} else {
+			try {
+				Json::Reader reader;
+				json_result.clear();
+				reader.parse(str_result, json_result);
+				CHECK_SERVER_ERR(json_result);
+			} catch (exception &e) {
+			  Logger::write_log("<get_walletData> Error ! %s", e.what());
+			}
+		}
+	}
+	
+  return status;
+}

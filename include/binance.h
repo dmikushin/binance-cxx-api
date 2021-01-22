@@ -254,6 +254,7 @@ namespace binance
 			const char *asset, int status, long startTime, long endTime, long recvWindow);
 
 		binanceError_t getDepositAddress(Json::Value &json_result, const char *asset, long recvWindow);
+		binanceError_t getWalletData(Json::Value &json_result, long recvWindow);
 	};
 }
 
