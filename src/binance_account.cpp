@@ -10,7 +10,9 @@
 #include "binance_utils.h"
 
 #include <fstream>
+#ifndef _WIN32
 #include <wordexp.h>
+#endif
 
 using namespace binance;
 using namespace std;
@@ -25,32 +27,44 @@ hostname(server_.getHostname()), server(server_), api_key(api_key_), secret_key(
 {
 	if (api_key == "")
 	{
+#ifndef _WIN32
 		wordexp_t p;
 		char** w;
 		wordexp(default_api_key_path.c_str(), &p, 0);
 		w = p.we_wordv;
 		ifstream binanceapi(w[0]);
+#else
+		ifstream binanceapi(default_api_key_path.c_str());
+#endif
 		if (binanceapi.is_open())
 		{
 			binanceapi >> api_key;
 			binanceapi.close();
 		}
+#ifndef _WIN32
 		wordfree(&p);
+#endif
 	}
 
 	if (secret_key == "")
 	{
+#ifndef _WIN32
 		wordexp_t p;
 		char** w;
 		wordexp(default_secret_key_path.c_str(), &p, 0);
 		w = p.we_wordv;
 		ifstream binanceapi(w[0]);
+#else
+		ifstream binanceapi(default_secret_key_path.c_str());
+#endif
 		if (binanceapi.is_open())
 		{
 			binanceapi >> secret_key;
 			binanceapi.close();
 		}
+#ifndef _WIN32
 		wordfree(&p);
+#endif
 	}
 }
 

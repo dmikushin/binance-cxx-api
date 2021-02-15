@@ -19,11 +19,17 @@
 #include <curl/curl.h>
 #include <json/json.h>
 
+#ifdef WIN32
+#include <winsock.h>
+#endif
+
 #ifndef HOST_NAME_MAX
 # if defined(_POSIX_HOST_NAME_MAX)
 #  define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
 # elif defined(MAXHOSTNAMELEN)
 #  define HOST_NAME_MAX MAXHOSTNAMELEN
+#elif WIN32
+#  define HOST_NAME_MAX 255
 # endif
 #endif /* HOST_NAME_MAX */
 
