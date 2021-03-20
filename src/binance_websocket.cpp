@@ -15,6 +15,8 @@
 #include <cassert>
 #include <iostream>
 
+#define ALWAYS_INLINE inline __attribute__((__always_inline__))
+
 using namespace binance;
 using namespace std;
 
@@ -413,6 +415,73 @@ void binance::Websocket::connect_endpoint(CB cb, const char* path)
 		lwsl_user("%s: schedule the first client connection for endpoint#:%d ws_path::%s\n",
 			__func__, n, endpoints_prop[n].ws_path);
 	}*/
+}
+
+ALWAYS_INLINE static int force_delete_ccinfo(const char *path) {
+
+  try {
+    for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      lwsl_info("%s: loop find path::%s vs path::%s\n",
+                __func__, path, endpoints_prop[n.first].ws_path);
+
+      if (endpoints_prop[n.first].ws_path != NULL && strcmp(const_cast<char *>(path), endpoints_prop[n.first].ws_path) == 0) {
+        std::atomic<int> idx(n.first);
+        lwsl_info("%s: found connect_endpoints ws_path::%s\n",
+                  __func__, endpoints_prop[idx].ws_path);
+        //lws_cancel_service(lws_get_context(endpoints_prop[idx].wsi));
+        //lws_context_destroy(lws_get_context(endpoints_prop[idx].wsi));
+        endpoints_prop[idx].wsi = NULL;
+        endpoints_prop[idx].json_cb = NULL;
+        endpoints_prop[idx].retry_count = 0;
+        endpoints_prop.erase(idx);
+        return 0;
+      }
+      if (endpoints_prop[n.first].ws_path != NULL && strlen(endpoints_prop[n.first].ws_path) < strlen("/ws/")) {
+        std::atomic<int> cancel_idx(n.first);
+        lwsl_info("%s: found connect_endpoints ws_path::%s\n",
+                  __func__, endpoints_prop[cancel_idx].ws_path);
+        //lws_cancel_service(lws_get_context(endpoints_prop[idx].wsi));
+        //lws_context_destroy(lws_get_context(endpoints_prop[idx].wsi));
+        endpoints_prop[cancel_idx].wsi = NULL;
+        endpoints_prop[cancel_idx].json_cb = NULL;
+        endpoints_prop[cancel_idx].retry_count = 0;
+        endpoints_prop.erase(cancel_idx);
+      }
+    }
+
+    lwsl_err("%s: not found connect_endpoints error path::%s\n",
+             __func__, path);
+    return -1;
+  } catch (exception &e) {
+    lwsl_err("%s:::%s\n",
+             __func__, e.what());
+    lwsl_err("%s: not found connect_endpoints error path::%s\n",
+             __func__, path);
+    return -1;
+  }
+  return -1;
+}
+
+// Unregister call backs
+void binance::Websocket::disconnect_endpoint(const char *path) {
+  try {
+    pthread_mutex_lock(&lock_concurrent);
+    if (!endpoints_prop.size()) {
+      lwsl_err("%s: error connect_endpoints is empty,\n",
+               __func__);
+      pthread_mutex_unlock(&lock_concurrent);
+      return;
+    }
+    force_delete_ccinfo(path);
+    pthread_mutex_unlock(&lock_concurrent);
+  } catch (exception &e) {
+    lwsl_err("%s:::%s\n",
+             __func__, e.what());
+    lwsl_err("%s: disconnect_endpoint error path::%s\n",
+             __func__, path);
+    return;
+  }
+
 }
 
 // Entering event loop
