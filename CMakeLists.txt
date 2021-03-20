@@ -64,7 +64,7 @@ set(CURL_INCLUDE_DIRS
 set(CURL_LIBRARIES libcurl)
 
 option(LWS_STATIC_PIC "" ON)
-option(LWS_WITH_SSL "" OFF)
+option(LWS_WITH_SSL "" ON)
 option(LWS_WITH_MBEDTLS "" ON)
 option(LWS_WITH_EXPORT_LWSTARGETS "" OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/libwebsockets EXCLUDE_FROM_ALL)

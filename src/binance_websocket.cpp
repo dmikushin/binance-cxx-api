@@ -1,7 +1,7 @@
 /*
 	Author: tensaix2j
 	Date  : 2017/10/15
-	
+
 	C++ library for Binance API.
 */
 
@@ -21,6 +21,7 @@ using namespace std;
 static struct lws_context *context;
 static atomic<int> lws_service_cancelled(0);
 static void connect_client(lws_sorted_usec_list_t *sul);
+static int force_reconnect(const int &idx);
 /*
  * This "contains" the endpoint connection proprty and has
  * the connection bound to it
@@ -34,13 +35,13 @@ struct endpoint_connection {
 	char* ws_path;
 };
 
-static std::unordered_map<int, endpoint_connection> endpoints_prop; /* serialize access */
-static pthread_mutex_t lock_concurrent; /* lock serialize access */
+static std::unordered_map<int, endpoint_connection> endpoints_prop;
+static pthread_mutex_t lock_concurrent; /* serialize access */
 
 /*
  * The retry and backoff policy we want to use for our client connections
  */
-const uint32_t backoff_ms[] = { 1000, 1000*2, 1000*3, 1000*4, 1000*5};
+static const uint32_t backoff_ms[] = { 1000*4, 1000*5, 1000*6, 1000*7, 1000*8, 1000*9};
 
 /*
  * This struct sets the policy for delays between retries,
@@ -48,12 +49,12 @@ const uint32_t backoff_ms[] = { 1000, 1000*2, 1000*3, 1000*4, 1000*5};
  * before it first tries to ping / pong on it to confirm it's up,
  * or drops the connection if still idle.
  */
-const lws_retry_bo_t retry = {
+static const lws_retry_bo_t retry = {
 	.retry_ms_table			= backoff_ms,
 	.retry_ms_table_count		= LWS_ARRAY_SIZE(backoff_ms),
 	.conceal_count			= LWS_ARRAY_SIZE(backoff_ms),
-	.secs_since_valid_ping		= 30, /* force PINGs after secs idle */
-	.secs_since_valid_hangup	= 60, /* hangup after secs idle */
+	.secs_since_valid_ping		= 600, /* force PINGs after secs idle */
+	.secs_since_valid_hangup	= 900, /* hangup after secs idle */
 	.jitter_percent			= 15,
 	/*
 	 * jitter_percent controls how much additional random delay is
@@ -68,6 +69,16 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
 	switch (reason)
 	{
+		case LWS_CALLBACK_PROTOCOL_INIT:
+			lwsl_user("%s: LWS_CALLBACK_PROTOCOL_INIT\n", __func__ );
+			for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+				pthread_mutex_lock(&lock_concurrent);
+				idx = n.first;
+				force_reconnect(idx);
+				pthread_mutex_unlock(&lock_concurrent);
+			}
+			break;
+
 		case LWS_CALLBACK_CLIENT_ESTABLISHED :
 			for (std::pair<int, endpoint_connection> n : endpoints_prop) {
 				if (endpoints_prop[n.first].wsi == wsi && current_data->ws_path == endpoints_prop[n.first].ws_path) {
@@ -115,6 +126,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 			{
 				pthread_mutex_unlock(&lock_concurrent);
 				Logger::write_log("<binance::Websocket::event_cb> Error parsing incoming message : %s\n", e.what());
+				lwsl_err("%s: Error parsing incoming message %s\n", __func__ , e.what());
 				return 1;
 			}
 		}
@@ -126,9 +138,11 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 		case LWS_CALLBACK_CLOSED :
 			for (std::pair<int, endpoint_connection> n : endpoints_prop) {
 				if (endpoints_prop[n.first].wsi == wsi && current_data->ws_path == endpoints_prop[n.first].ws_path) {
+					pthread_mutex_lock(&lock_concurrent);
 					idx = n.first;
 					lwsl_user("CALLBACK_CLOSED: %s\n",
 							  in ? (char *)in : "");
+					pthread_mutex_unlock(&lock_concurrent);
 					goto do_retry;
 				}
 			}
@@ -152,15 +166,21 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 			for (std::pair<int, endpoint_connection> n : endpoints_prop) {
 				if (endpoints_prop[n.first].wsi == wsi && current_data->ws_path == endpoints_prop[n.first].ws_path) {
 					pthread_mutex_lock(&lock_concurrent);
-					lwsl_err("CLIENT_CONNECTION_ERROR: %s\n",
-							 in ? (char *)in : "(null)");
 					idx = n.first;
-					endpoints_prop.erase(idx);
-					lws_cancel_service(lws_get_context(wsi));
-					lws_context_destroy(lws_get_context(wsi));
-					atomic_store(&lws_service_cancelled, 1);
+					endpoints_prop[n.first].wsi = NULL;
+					endpoints_prop[idx].retry_count++;
+					if(force_reconnect(idx) || endpoints_prop[idx].retry_count > 2*(LWS_ARRAY_SIZE(backoff_ms))){
+						lwsl_err("CLIENT_CONNECTION_ERROR: %s : %s\n",
+								 in ? (char *)in : "(null)", current_data->ws_path);
+						endpoints_prop.erase(idx);
+						lws_cancel_service(lws_get_context(wsi));
+						lws_context_destroy(lws_get_context(wsi));
+						atomic_store(&lws_service_cancelled, 1);
+						pthread_mutex_unlock(&lock_concurrent);
+						return -1;
+					}
 					pthread_mutex_unlock(&lock_concurrent);
-					return -1;
+					break;
 				}
 			}
 			break;
@@ -168,9 +188,11 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 		case LWS_CALLBACK_CLIENT_CLOSED:
 			for (std::pair<int, endpoint_connection> n : endpoints_prop) {
 				if (endpoints_prop[n.first].wsi == wsi && current_data->ws_path == endpoints_prop[n.first].ws_path) {
+					pthread_mutex_lock(&lock_concurrent);
 					idx = n.first;
 					lwsl_user("CLIENT_CALLBACK_CLIENT_CLOSED: %s\n",
 							  in ? (char *)in : "");
+					pthread_mutex_unlock(&lock_concurrent);
 					goto do_retry;
 				}
 			}
@@ -181,7 +203,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 			break;
 	}
 
-	return 0;
+	return lws_callback_http_dummy(wsi, reason, user, in, len);
 
 do_retry:
 	try{
@@ -190,33 +212,42 @@ do_retry:
 		{
 			if(endpoints_prop[idx].retry_count > 2*(LWS_ARRAY_SIZE(backoff_ms))){
 				pthread_mutex_lock(&lock_concurrent);
-				lwsl_err("%s: connection attempts exhausted, after [%d] retry, ws_path:%s\n",
+				lwsl_err("%s: connection attempts exhausted, retry_count[%d], ws_path:%s\n",
 						 __func__, endpoints_prop[idx].retry_count, endpoints_prop[idx].ws_path);
 				endpoints_prop.erase(idx);
 				lws_cancel_service(lws_get_context(wsi));
 				lws_context_destroy(lws_get_context(wsi));
 				atomic_store(&lws_service_cancelled, 1);
 				pthread_mutex_unlock(&lock_concurrent);
-				return -1;
+					return -1;
 			}
 			{
-				lwsl_err("%s: connection attempts exhausted,we will keep retrying [%d] ws_path:%s\n",
-						 __func__, endpoints_prop[idx].retry_count, endpoints_prop[idx].ws_path);
-				atomic_store(&lws_service_cancelled, 0);
-				lws_sul_schedule(lws_get_context(endpoints_prop[idx].wsi), 0, &endpoints_prop[idx]._sul, connect_client, 1 * LWS_US_PER_MS);
-				return 0;
+				pthread_mutex_lock(&lock_concurrent);
+				endpoints_prop[idx].wsi = NULL;
+				auto n = force_reconnect(idx);
+				if (n)
+				{
+					endpoints_prop.erase(idx);
+					lws_cancel_service(lws_get_context(wsi));
+					lws_context_destroy(lws_get_context(wsi));
+					atomic_store(&lws_service_cancelled, 1);
+					pthread_mutex_unlock(&lock_concurrent);
+					return -1;
+				}
+				pthread_mutex_unlock(&lock_concurrent);
 			}
 		}
 		lwsl_user("%s: connection attempts success, after [%d] retry, ws_path:%s\n",
-				  __func__, endpoints_prop[idx].retry_count, endpoints_prop[idx].ws_path);
+				 __func__, endpoints_prop[idx].retry_count, endpoints_prop[idx].ws_path);
 	}catch (exception &e)
 	{
 		Logger::write_log("<binance::Websocket::event_cb> Error do_retry message : %s\n", e.what());
+		lwsl_err("%s: Error in do_retry: %s\n", __func__ , e.what());
 		atomic_store(&lws_service_cancelled, 1);
 		return -1;
 	}
 
-	return 0;
+	return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
 
 static const lws_protocols protocols[] =
@@ -224,15 +255,14 @@ static const lws_protocols protocols[] =
 		{
 			.name = "binance-websocket-api",
 			.callback = event_cb,
-			.per_session_data_size = 0,
-			.rx_buffer_size = 0,
+			.per_session_data_size = sizeof(struct endpoint_connection),
+			.rx_buffer_size = 128*1024,
 		},
 
 		{ NULL, NULL, 0, 0 } /* end */
 	};
 
-static void
-sigint_handler(int sig)
+static void sigint_handler(int sig)
 {
 	Logger::write_log("<binance::Websocket::sigint_handler> Interactive attention signal : %d\n", sig);
 	atomic_store(&lws_service_cancelled, 1);
@@ -245,8 +275,9 @@ static void connect_client(lws_sorted_usec_list_t *sul)
 {
 	for (std::pair<int, endpoint_connection> n : endpoints_prop) {
 		if (&endpoints_prop[n.first]._sul == sul) {
+			pthread_mutex_lock(&lock_concurrent);
 			lwsl_user("%s: success ws_path::%s\n",
-					  __func__, endpoints_prop[n.first].ws_path);
+				__func__, endpoints_prop[n.first].ws_path);
 			struct lws_client_connect_info ccinfo;
 
 			memset(&ccinfo, 0, sizeof(ccinfo));
@@ -257,7 +288,10 @@ static void connect_client(lws_sorted_usec_list_t *sul)
 			ccinfo.path = endpoints_prop[n.first].ws_path;
 			ccinfo.host = lws_canonical_hostname(context);
 			ccinfo.origin = "origin";
-			ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK | LCCSCF_PIPELINE;
+			ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED |
+				                    LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK |
+				                    LCCSCF_PIPELINE | LCCSCF_PRIORITIZE_READS |
+				                    LCCSCF_WAKE_SUSPEND__VALIDITY;
 			ccinfo.protocol = protocols[0].name;
 			ccinfo.local_protocol_name = protocols[0].name;
 			ccinfo.retry_and_idle_policy = &retry;
@@ -270,6 +304,7 @@ static void connect_client(lws_sorted_usec_list_t *sul)
 			ccinfo.pwsi = &endpoints_prop[n.first].wsi;
 
 			endpoints_prop[n.first].conn = lws_client_connect_via_info(&ccinfo);
+			pthread_mutex_unlock(&lock_concurrent);
 			if (!endpoints_prop[n.first].conn)
 			{
 				/*
@@ -280,15 +315,49 @@ static void connect_client(lws_sorted_usec_list_t *sul)
 				if (lws_retry_sul_schedule(context, 0, &endpoints_prop[n.first]._sul, &retry,
 										   connect_client, &endpoints_prop[n.first].retry_count))
 				{
+					pthread_mutex_lock(&lock_concurrent);
 					lwsl_err("%s: Failed schedule a retry, we can't use the _retry_wsi():%s\n",
-							 __func__, endpoints_prop[n.first].ws_path);
+						__func__, endpoints_prop[n.first].ws_path);
 					atomic_store(&lws_service_cancelled, 1);
+					pthread_mutex_unlock(&lock_concurrent);
 					return;
 				}
 			}
 			break;
 		}
 	}
+}
+
+static int force_reconnect(const int &idx)
+{
+	struct lws_client_connect_info ccinfo;
+	memset(&ccinfo, 0, sizeof(ccinfo));
+	ccinfo.context = context;
+	ccinfo.port = BINANCE_WS_PORT;
+	ccinfo.address = BINANCE_WS_HOST;
+	ccinfo.path = endpoints_prop[idx].ws_path;
+	ccinfo.host = lws_canonical_hostname(context);
+	ccinfo.origin = "origin";
+	ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED |
+		                    LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK |
+		                    LCCSCF_PIPELINE | LCCSCF_PRIORITIZE_READS |
+		                    LCCSCF_WAKE_SUSPEND__VALIDITY;
+	ccinfo.protocol = protocols[0].name;
+	ccinfo.local_protocol_name = protocols[0].name;
+	ccinfo.retry_and_idle_policy = &retry;
+	ccinfo.userdata = &endpoints_prop[idx];
+	ccinfo.pwsi = &endpoints_prop[idx].wsi;
+	endpoints_prop[idx].conn = lws_client_connect_via_info(&ccinfo);
+	if (!endpoints_prop[idx].conn)
+	{
+		lwsl_err("%s: Failed :%s\n",
+				 __func__, endpoints_prop[idx].ws_path);
+		atomic_store(&lws_service_cancelled, 1);
+		return 1;
+	}
+	lwsl_user("%s: success, retry_count[%d] endpoint#:%d ws_path::%s\n",
+			 __func__, idx , endpoints_prop[idx].retry_count, endpoints_prop[idx].ws_path);
+	return 0;
 }
 
 void binance::Websocket::init()
@@ -333,15 +402,15 @@ void binance::Websocket::connect_endpoint(CB cb, const char* path)
 	endpoints_prop[n].ws_path = const_cast<char *>(path);
 	endpoints_prop[n].json_cb = cb;
 	pthread_mutex_unlock(&lock_concurrent);
-	connect_client(&endpoints_prop[n]._sul);
+	/*connect_client(&endpoints_prop[n]._sul);
 
 	if (!lws_service_cancelled)
 	{
-		/* schedule the first client connection attempt to happen immediately */
+		*//* schedule the first client connection attempt to happen immediately *//*
 		lws_sul_schedule(context, 0, &endpoints_prop[n]._sul, connect_client, 1 * LWS_US_PER_MS);
 		lwsl_user("%s: schedule the first client connection for endpoint#:%d ws_path::%s\n",
-				  __func__, n, endpoints_prop[n].ws_path);
-	}
+			__func__, n, endpoints_prop[n].ws_path);
+	}*/
 }
 
 // Entering event loop
@@ -350,9 +419,10 @@ void binance::Websocket::enter_event_loop(const std::chrono::hours &hours)
 	auto start = std::chrono::steady_clock::now();
 	auto end = start + hours;
 	auto n = 0;
+	lwsl_user("%s: INIT\n", __func__ );
 	do {
 		try{
-			n = lws_service(context, 500);
+			n = lws_service(context, 0);
 			if (lws_service_cancelled)
 			{
 				lws_cancel_service(context);
@@ -370,6 +440,5 @@ void binance::Websocket::enter_event_loop(const std::chrono::hours &hours)
 	endpoints_prop.clear();
 	atomic_store(&lws_service_cancelled, 1);
 	lws_context_destroy(context);
-	
 	pthread_mutex_destroy(&lock_concurrent);
 }
