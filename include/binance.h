@@ -188,6 +188,7 @@ namespace binance
         binanceError_t getAndSaveExchangeInfo();
 		binanceError_t getLotSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
 		binanceError_t getTickSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
+        binanceError_t getBaseAsset(const char *symbol, std::string& baseAsset, int& baseAssetPrecision, int& baseCommissionPrecision);
 		binanceError_t getMinNotional(const char *symbol, double& minNotional);
 	};
 

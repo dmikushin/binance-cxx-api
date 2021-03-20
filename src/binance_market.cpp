@@ -222,6 +222,37 @@ binanceError_t binance::Market::getTickSize(const char *symbol, double& maxPrice
 	return status;
 }
 
+binanceError_t binance::Market::getBaseAsset(const char *symbol, string& baseAsset, int& baseAssetPrecision, int& baseCommissionPrecision)
+{
+  Logger::write_log("<get_BaseAssetconst>");
+
+  Json::Value exchangeInfo;
+  string str_symbol = string_toupper(symbol);
+  binanceError_t status = getExchangeInfoLocaly(exchangeInfo);
+  CHECK_SERVER_ERR(exchangeInfo);
+
+  if (status == binanceSuccess)
+  {
+    status = binanceErrorInvalidSymbol;
+
+    for (int i = 0;i < exchangeInfo["symbols"].size();i++)
+    {
+      if (exchangeInfo["symbols"][i]["symbol"].asString() == str_symbol)
+      {
+        baseAsset = exchangeInfo["symbols"][i]["baseAsset"].asString().c_str();
+        baseAssetPrecision = atoi(exchangeInfo["symbols"][i]["baseAssetPrecision"].asString().c_str());
+        baseCommissionPrecision = atoi(exchangeInfo["symbols"][i]["baseCommissionPrecision"].asString().c_str());
+        status = binanceSuccess;
+        break;
+      }
+    }
+  }
+
+  Logger::write_log("<get_BaseAssetconst> Done.");
+
+  return status;
+}
+
 binanceError_t binance::Market::getMinNotional(const char *symbol, double& minNotional)
 {
     Logger::write_log("<get_MinNotional>");
