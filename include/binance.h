@@ -230,7 +230,7 @@ namespace binance
 
 		binanceError_t sendOrder(Json::Value &json_result, const char *symbol, const char *side, const char *type,
 			const char *timeInForce, double quantity, double price, const char *newClientOrderId, double stopPrice,
-			double icebergQty, long recvWindow);
+			double icebergQty, long recvWindow, int baseAssetPrecision = 8);
 
 		binanceError_t sendTestOrder(Json::Value &json_result, const char *symbol, const char *side, const char *type,
 			const char *timeInForce, double quantity, double price, const char *newClientOrderId, double stopPrice,

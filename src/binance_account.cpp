@@ -758,7 +758,7 @@ binanceError_t binance::Account::getAllOrders(Json::Value &json_result, const ch
 //
 binanceError_t binance::Account::sendOrder(Json::Value &json_result, const char *symbol,
 	const char *side, const char *type, const char *timeInForce, double quantity, double price,
-	const char *newClientOrderId, double stopPrice, double icebergQty, long recvWindow) 
+	const char *newClientOrderId, double stopPrice, double icebergQty, long recvWindow, int baseAssetPrecision)
 {	
 	binanceError_t status = binanceSuccess;
 
@@ -789,7 +789,7 @@ binanceError_t binance::Account::sendOrder(Json::Value &json_result, const char 
 		}
 
 		post_data.append("&quantity=");
-		post_data.append(toString(quantity));
+		post_data.append(toString(quantity,baseAssetPrecision));
 
 		if (price > 0.0)
 		{
