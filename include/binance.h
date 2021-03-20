@@ -124,7 +124,7 @@ namespace binance
 		return out.str();
 	}
 
-	std::string toString(double val);
+	std::string toString(double val, int prec = 8);
 
 	class Server
 	{

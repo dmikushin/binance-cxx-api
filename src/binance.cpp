@@ -53,10 +53,10 @@ const char* binance::binanceGetErrorString(const binanceError_t err)
 	return str_binanceErrorUnknown.c_str();
 }
 
-std::string binance::toString(double val)
+std::string binance::toString(double val, int prec)
 {
 	std::ostringstream out;
-	out.precision(8);
+	out.precision(prec);
 	out.setf(std::ios_base::fixed);
 	out << val;
 	return out.str();
