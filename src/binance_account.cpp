@@ -1298,7 +1298,7 @@ binanceError_t binance::Account::keepUserDataStream(const char *listenKey)
 	return status;
 }
 
-// Keepalive user data stream (API-KEY)
+// close user data stream (API-KEY)
 binanceError_t binance::Account::closeUserDataStream(const char *listenKey) 
 {	
 	binanceError_t status = binanceSuccess;
