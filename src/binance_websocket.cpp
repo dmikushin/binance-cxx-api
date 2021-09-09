@@ -12,6 +12,7 @@
 #include <libwebsockets.h>
 #include <unordered_map>
 #include <csignal>
+#include <assert.h>
 //#include <cassert>
 //#include <iostream>
 
@@ -466,6 +467,51 @@ ALWAYS_INLINE static void force_delete_ccinfo(const char *path) {
              __func__, path);
     return;
   }
+}
+
+ALWAYS_INLINE static void force_reconnect(const char *path) {
+
+  try {
+    std::atomic<bool> path_found(false);
+    for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      assert(endpoints_prop[n.first].ws_path);
+      lwsl_info("%s: loop find path::%s vs path::%s\n",
+                __func__, path, endpoints_prop[n.first].ws_path);
+
+      if (endpoints_prop[n.first].ws_path != NULL && strcmp(const_cast<char *>(path), endpoints_prop[n.first].ws_path) == 0) {
+        std::atomic<int> idx(n.first);
+        lwsl_info("%s: found ws_path::%s\n",
+                  __func__, endpoints_prop[idx.load()].ws_path);
+        if (!lws_service_cancelled)
+        {
+          //schedule the first client connection attempt to happen immediately
+          lws_sul_schedule(context, 0, &endpoints_prop[idx.load()]._sul, connect_client, 1 * LWS_US_PER_MS);
+          lwsl_user("%s: schedule reconnection for endpoint#:%d ws_path::%s\n",
+                    __func__, idx.load(), endpoints_prop[idx.load()].ws_path);
+        }
+        path_found.store(true);
+        break;
+      }
+    }
+    if(!path_found.load()){
+      lwsl_err("%s: not found force_reconnect error path::%s\n",
+               __func__, path);
+    }
+
+    return;
+  } catch (exception &e) {
+    lwsl_err("%s:::%s\n",
+             __func__, e.what());
+    lwsl_err("%s: not found force_reconnect error path::%s\n",
+             __func__, path);
+    return;
+  }
+}
+
+void binance::Websocket::reconnect_path(const char *path) {
+  pthread_mutex_lock(&lock_concurrent);
+  force_reconnect(path);
+  pthread_mutex_unlock(&lock_concurrent);
 }
 
 void binance::Websocket::kill_all() {

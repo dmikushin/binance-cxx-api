@@ -26,6 +26,7 @@ namespace binance
           static void init();
           static void enter_event_loop(const std::chrono::hours &hours = std::chrono::hours(24));
         static void kill_all();
+        static void reconnect_path(const char* path);
 	};
 }
 
