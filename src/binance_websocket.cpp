@@ -468,6 +468,12 @@ ALWAYS_INLINE static void force_delete_ccinfo(const char *path) {
   }
 }
 
+void binance::Websocket::kill_all() {
+  pthread_mutex_lock(&lock_concurrent);
+  atomic_store(&lws_service_cancelled, 1);
+  pthread_mutex_unlock(&lock_concurrent);
+}
+
 // Unregister call backs
 void binance::Websocket::disconnect_endpoint(const char *path) {
   try {
