@@ -56,9 +56,9 @@ static const lws_retry_bo_t retry = {
     .retry_ms_table            = backoff_ms,
     .retry_ms_table_count        = LWS_ARRAY_SIZE(backoff_ms),
     .conceal_count            = LWS_ARRAY_SIZE(backoff_ms),
-    .secs_since_valid_ping        = 600, /* force PINGs after secs idle */
-    .secs_since_valid_hangup    = 900, /* hangup after secs idle */
-    .jitter_percent            = 15,
+    .secs_since_valid_ping        = 60, /* force PINGs after secs idle */
+    .secs_since_valid_hangup    = 60, /* hangup after secs idle */
+    .jitter_percent            = 30,
     /*
      * jitter_percent controls how much additional random delay is
      * added to the actual interval to be used, default 30
