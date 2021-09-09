@@ -241,6 +241,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
           pthread_mutex_unlock(&lock_concurrent);
           return -1;
         }
+        endpoints_prop[idx.load()].retry_count = 0;
         pthread_mutex_unlock(&lock_concurrent);
       }
     }
