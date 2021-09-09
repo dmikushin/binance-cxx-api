@@ -73,6 +73,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
   case LWS_CALLBACK_PROTOCOL_INIT:
     lwsl_user("%s: LWS_CALLBACK_PROTOCOL_INIT\n", __func__);
     for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      assert(endpoints_prop[n.first].ws_path);
+      assert(endpoints_prop[n.first].wsi);
       if(endpoints_prop[n.first].ws_path != NULL){
         idx = n.first;
         force_create_ccinfo(idx.load());
@@ -82,6 +84,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_CLIENT_ESTABLISHED :
     for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      assert(endpoints_prop[n.first].ws_path);
+      assert(endpoints_prop[n.first].wsi);
       if (endpoints_prop[n.first].ws_path != NULL && endpoints_prop[n.first].wsi == wsi && strcmp(current_data->ws_path, endpoints_prop[n.first].ws_path) == 0) {
         pthread_mutex_lock(&lock_concurrent);
         idx = n.first;
@@ -101,6 +105,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 			try
 			{
       for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+        assert(endpoints_prop[n.first].ws_path);
+        assert(endpoints_prop[n.first].wsi);
         if (endpoints_prop[n.first].ws_path != NULL && endpoints_prop[n.first].wsi == wsi && strcmp(current_data->ws_path, endpoints_prop[n.first].ws_path) == 0) {
           pthread_mutex_lock(&lock_concurrent);
           string str_result = string(reinterpret_cast<const char *>(in), len);
@@ -138,6 +144,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_CLOSED :
     for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      assert(endpoints_prop[n.first].ws_path);
+      assert(endpoints_prop[n.first].wsi);
       if (endpoints_prop[n.first].ws_path != NULL && endpoints_prop[n.first].wsi == wsi && strcmp(current_data->ws_path, endpoints_prop[n.first].ws_path) == 0) {
         pthread_mutex_lock(&lock_concurrent);
         idx = n.first;
@@ -164,6 +172,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_CLIENT_CONNECTION_ERROR :
     for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      assert(endpoints_prop[n.first].ws_path);
+      assert(endpoints_prop[n.first].wsi);
       if (endpoints_prop[n.first].ws_path != NULL && endpoints_prop[n.first].wsi == wsi && strcmp(current_data->ws_path, endpoints_prop[n.first].ws_path) == 0) {
         pthread_mutex_lock(&lock_concurrent);
         idx = n.first;
@@ -190,6 +200,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_CLIENT_CLOSED:
     for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      assert(endpoints_prop[n.first].ws_path);
+      assert(endpoints_prop[n.first].wsi);
       if (endpoints_prop[n.first].ws_path != NULL && endpoints_prop[n.first].wsi == wsi && strcmp(current_data->ws_path, endpoints_prop[n.first].ws_path) == 0) {
         pthread_mutex_lock(&lock_concurrent);
         idx = n.first;
@@ -210,6 +222,10 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   do_retry:
   try {
+    assert(endpoints_prop[n.first].ws_path);
+    assert(endpoints_prop[n.first].wsi);
+    assert(endpoints_prop[n.first]._sul);
+    assert(endpoints_prop[n.first].retry_count);
     if (lws_retry_sul_schedule_retry_wsi(endpoints_prop[idx.load()].wsi, &endpoints_prop[idx.load()]._sul, connect_client,
                                          &endpoints_prop[idx.load()].retry_count)) {
       if (endpoints_prop[idx.load()].retry_count > 2 * (LWS_ARRAY_SIZE(backoff_ms))) {
@@ -279,6 +295,9 @@ ALWAYS_INLINE static void sigint_handler(int sig) {
  */
 ALWAYS_INLINE static void connect_client(lws_sorted_usec_list_t *sul) {
   for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+    assert(endpoints_prop[n.first].ws_path);
+    assert(endpoints_prop[n.first].wsi);
+    assert(endpoints_prop[n.first]._sul);
     if (&endpoints_prop[n.first]._sul == sul) {
       pthread_mutex_lock(&lock_concurrent);
       std::atomic<int> idx(n.first);
@@ -334,6 +353,8 @@ ALWAYS_INLINE static void connect_client(lws_sorted_usec_list_t *sul) {
 
 ALWAYS_INLINE static int force_create_ccinfo(const int &idx) {
   try {
+    assert(endpoints_prop[idx].ws_path);
+    assert(endpoints_prop[idx].wsi);
     struct lws_client_connect_info ccinfo{};
     memset(&ccinfo, 0, sizeof(ccinfo));
     ccinfo.context = context;
@@ -437,6 +458,7 @@ ALWAYS_INLINE static void force_delete_ccinfo(const char *path) {
   try {
     std::atomic<bool> path_found(false);
     for (std::pair<int, endpoint_connection> n : endpoints_prop) {
+      assert(endpoints_prop[n.first].ws_path);
       lwsl_info("%s: loop find path::%s vs path::%s\n",
                 __func__, path, endpoints_prop[n.first].ws_path);
 
