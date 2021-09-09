@@ -21,12 +21,11 @@ namespace binance
 	class Websocket
 	{	
 	public :
-          static void connect_endpoint(CB user_cb, const char *path);
-          static void disconnect_endpoint(const char* path);
-          static void init();
-          static void enter_event_loop(const std::chrono::hours &hours = std::chrono::hours(24));
+		static void connect_endpoint(CB user_cb, const std::string &path);
+        static void disconnect_endpoint(const std::string &path);
+		static void init();
+		static void enter_event_loop(const std::chrono::hours &hours = std::chrono::hours(24));
         static void kill_all();
-        static void reconnect_path(const char* path);
 	};
 }
 
