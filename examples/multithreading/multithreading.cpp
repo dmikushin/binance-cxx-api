@@ -116,51 +116,76 @@ ws_userStream_OnData(Json::Value &json_result)
   return 0;
 }
 
-void * ThredME(void * id) {
-    cout << "ThredME loop" << endl;
-    Websocket::init();
-    sleep (1);
+string ws_1th_path = string("/ws/");
+
+void * Thread_1(void * id) {
+    cout << "Thread_1 loop" << endl;
+
     Server _server;
     Account account(_server);
     Json::Value json_result;
     account.startUserDataStream(json_result);
     cout << json_result << endl;
-    string ws_path = string("/ws/");
-    ws_path.append(json_result["listenKey"].asString());
-
-    Websocket::connect_endpoint( ws_userStream_OnData , ws_path.c_str() );
+    ws_1th_path.append(json_result["listenKey"].asString());
+    Websocket::init();
+    Websocket::connect_endpoint(ws_userStream_OnData, ws_1th_path.c_str());
+    cout << "add another endpoint 1th before enter_event_loop" << endl;
+    sleep(1);
+    Websocket::connect_endpoint(ws_klines_onData, "/ws/algobnb@depth20@1000ms");
     cout << std::setprecision(10) << "\nWebsocket ws_userStream_OnData init" << std::endl;
-    Websocket::enter_event_loop();
-    cout << "error exiting ThredME" << endl;
+    Websocket::enter_event_loop(std::chrono::hours(1));
+    cout << "exiting Thread_1" << endl;
     return NULL;
 };
 
-void * ThredMER(void * id) {
-  cout << "ThredMER loop" << endl;
+void * Thread_2(void * id) {
+  cout << "Thread_2 loop" << endl;
   sleep (10);
-  cout << "add another endpoint 2" << endl;
+  cout << "add /ws/bnbusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
   Websocket::connect_endpoint(ws_klines_onData, "/ws/bnbusdt@miniTicker");
 
   sleep (10);
-  cout << "add another endpoint 3" << endl;
+  cout << "add /ws/ethusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
   Websocket::connect_endpoint(ws_klines_onData, "/ws/ethusdt@miniTicker");
 
   sleep(20);
-  cout << "remove endpoint 2" << endl;
+  cout << "remove /ws/bnbusdt@miniTicker" << endl;
+  sleep(1);
   Websocket::disconnect_endpoint("/ws/bnbusdt@miniTicker");
 
-  sleep(5);
-  cout << "remove non existing endpoint" << endl;
+  sleep(10);
+  cout << "remove non existing /ws/xxxxxx@miniTicker" << endl;
+  sleep(1);
   Websocket::disconnect_endpoint("/ws/xxxxxx@miniTicker");
 
-  sleep(5);
-  cout << "remove endpoint 3" << endl;
-  Websocket::disconnect_endpoint("/ws/ethusdt@miniTicker");
-
-  sleep(5);
-  cout << "remove endpoint ??" << endl;
+  sleep(10);
+  cout << "remove /ws/xrpbtc@miniTicker" << endl;
+  sleep(1);
   Websocket::disconnect_endpoint("/ws/xrpbtc@miniTicker");
-  cout << "error exiting ThredMER" << endl;
+
+  sleep(10);
+  cout << "remove /ws/xrpbtc@miniTicker ??" << endl;
+  sleep(1);
+  Websocket::disconnect_endpoint("/ws/xrpbtc@miniTicker");
+
+  sleep(10);
+  cout << "remove /ws/algobnb@depth20@1000ms before enter_event_loop" << endl;
+  sleep(1);
+  Websocket::disconnect_endpoint("/ws/algobnb@depth20@1000ms");
+
+  sleep(10);
+  cout << "remove "<<ws_1th_path<<" in init" << endl;
+  sleep(1);
+  Websocket::disconnect_endpoint(ws_1th_path.c_str());
+
+  sleep(20);
+  cout << "kill_all" << endl;
+  sleep(5);
+  Websocket::kill_all();
+
+  cout << "exiting Thread_2" << endl;
   return NULL;
 };
 
@@ -171,34 +196,38 @@ int main()
 
   pthread_t inc_x_thread[NUM_THREADS];
   /* create all thread which are to be executes */
-  //for (int i = 0; i < NUM_THREADS; i++)
+  for (int i = 0; i < NUM_THREADS; i++)
   {
-    cout << "enter_event_loop 1" << endl;
-    if(pthread_create(&inc_x_thread[0], NULL,ThredME, reinterpret_cast<void *>(0))) {
+    if(i == 0){
+      sleep(1);
+      cout << "pthread_create 1" << endl;
+      if (pthread_create(&inc_x_thread[0], NULL, Thread_1, reinterpret_cast<void *>(0))) {
 
-      fprintf(stderr, "Error creating thread\n");
-      return 1;
+        fprintf(stderr, "Error creating thread\n");
+        return 1;
 
+      }
     }
-    //pthread_detach(inc_x_thread[0]);
-  }
 
-  {
-    cout << "enter_event_loop 2" << endl;
-    if(pthread_create(&inc_x_thread[1], NULL,ThredMER, reinterpret_cast<void *>(1))) {
+    cout << "sleep for 10sec before adding other endpoints" << endl;
+    sleep(10);
+    
+    if(i == 1){
+      sleep(1);
+      cout << "pthread_create 2" << endl;
+      if(pthread_create(&inc_x_thread[1], NULL,Thread_2, reinterpret_cast<void *>(1))) {
 
-      fprintf(stderr, "Error creating thread\n");
-      return 1;
+        fprintf(stderr, "Error creating thread\n");
+        return 1;
 
+      }
     }
-    //pthread_detach(inc_x_thread[1]);
   }
-
-  sleep(10);
 
   /* wait for the thread to finish */
   for (int i = 0; i < NUM_THREADS; i++)
   {
+    
     if(pthread_join(inc_x_thread[i], NULL)) {
 
       fprintf(stderr, "Error joining thread\n");
