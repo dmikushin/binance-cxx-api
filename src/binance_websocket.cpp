@@ -443,8 +443,7 @@ ALWAYS_INLINE static void force_delete_ccinfo(const char *path) {
         std::atomic<int> idx(n.first);
         lwsl_info("%s: found connect_endpoints ws_path::%s\n",
                   __func__, endpoints_prop[idx].ws_path);
-        auto wsi = lws_get_context(endpoints_prop[idx].wsi);
-        lws_cancel_service(wsi);
+        lws_cancel_service_pt(endpoints_prop[idx].wsi);
         endpoints_prop[idx.load()].ws_path = NULL;
         endpoints_prop[idx.load()].wsi = NULL;
         endpoints_prop[idx.load()].json_cb = NULL;
