@@ -16,7 +16,7 @@ using namespace std;
 #define NUM_THREADS 2
 
 
-void print_depthCache(map < string, map <double,double> >  depthCache) {
+void print_depthCache(map < string, map <double,double> >  depthCache, int64_t id) {
 
 	map < string, map <double,double> >::iterator it_i;
 
@@ -24,7 +24,7 @@ void print_depthCache(map < string, map <double,double> >  depthCache) {
 
 		string bid_or_ask = (*it_i).first ;
 		cout << bid_or_ask << endl ;
-		cout << "Price             Qty" << endl ;
+		cout << "Price         Qty    ID:" << id << endl ;
 
 		map <double,double>::reverse_iterator it_j;
 
@@ -85,7 +85,7 @@ int ws_klines_onData(Json::Value& json_result)
 				depthCache["asks"][price] = qty;
 			}
 		}
-		print_depthCache(depthCache);
+		print_depthCache(depthCache, json_result["lastUpdateId"].asInt64());
 	}else if(json_result["e"].asString() == "kline"){
 		long start_of_candle = json_result["k"]["t"].asInt64();
 		klinesCache[start_of_candle]["o"] = atof(json_result["k"]["o"].asString().c_str());
@@ -129,10 +129,12 @@ void * Thread_1(void * id) {
     ws_1th_path.append(json_result["listenKey"].asString());
     Websocket::init();
     Websocket::connect_endpoint(ws_userStream_OnData, ws_1th_path.c_str());
-    cout << "add another endpoint 1th before enter_event_loop" << endl;
-    sleep(1);
-    Websocket::connect_endpoint(ws_klines_onData, "/ws/algobnb@depth20@1000ms");
     cout << std::setprecision(10) << "\nWebsocket ws_userStream_OnData init" << std::endl;
+
+    sleep(1);
+    cout << "add another endpoint 1th before enter_event_loop" << endl;
+    Websocket::connect_endpoint(ws_klines_onData, "/ws/xrpbtc@miniTicker");
+
     Websocket::enter_event_loop(std::chrono::hours(1));
     cout << "exiting Thread_1" << endl;
     return NULL;
@@ -156,31 +158,145 @@ void * Thread_2(void * id) {
   Websocket::disconnect_endpoint("/ws/bnbusdt@miniTicker");
 
   sleep(10);
-  cout << "remove non existing /ws/xxxxxx@miniTicker" << endl;
+  cout << "remove non existing /ws/xxxxxx@miniTicker ??" << endl;
   sleep(1);
   Websocket::disconnect_endpoint("/ws/xxxxxx@miniTicker");
 
   sleep(10);
-  cout << "remove /ws/xrpbtc@miniTicker" << endl;
+  cout << "remove /ws/algobnb@depth5@1000ms before enter_event_loop" << endl;
   sleep(1);
-  Websocket::disconnect_endpoint("/ws/xrpbtc@miniTicker");
-
-  sleep(10);
-  cout << "remove /ws/xrpbtc@miniTicker ??" << endl;
-  sleep(1);
-  Websocket::disconnect_endpoint("/ws/xrpbtc@miniTicker");
-
-  sleep(10);
-  cout << "remove /ws/algobnb@depth20@1000ms before enter_event_loop" << endl;
-  sleep(1);
-  Websocket::disconnect_endpoint("/ws/algobnb@depth20@1000ms");
+  Websocket::disconnect_endpoint("/ws/algobnb@depth5@1000ms");
 
   sleep(10);
   cout << "remove "<<ws_1th_path<<" in init" << endl;
   sleep(1);
   Websocket::disconnect_endpoint(ws_1th_path.c_str());
 
-  sleep(20);
+  sleep (20);
+  cout << "add /ws/bnbusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/bnbusdt@miniTicker");
+
+  sleep(10);
+  cout << "add /ws/xrpbtc@miniTicker" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xrpbtc@miniTicker");
+
+  sleep (20);
+  cout << "add /ws/algobnb@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/algobnb@miniTicker");
+
+  sleep(10);
+  cout << "remove /ws/ethusdt@depth5@1000ms before enter_event_loop" << endl;
+  sleep(1);
+  Websocket::disconnect_endpoint("/ws/ethusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/xtzusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xtzusdt@miniTicker");
+
+  sleep (20);
+  cout << "add /ws/eosusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/eosusdt@miniTicker");
+
+  sleep (20);
+  cout << "add /ws/xrpbnb@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xrpbnb@miniTicker");
+
+
+  sleep (20);
+  cout << "add /ws/xtzusdt@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xtzusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/eosusdt@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/eosusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/xrpbnb@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xrpbnb@depth5@1000ms");
+
+
+  sleep (20);
+  cout << "add /ws/ethusdt@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/ethusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/ethbusd@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/ethbusd@depth5@1000ms");
+
+  sleep(60*30);
+  cout << "add /ws/bnbusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/bnbusdt@miniTicker");
+
+  sleep(10);
+  cout << "add /ws/xrpbtc@miniTicker" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xrpbtc@miniTicker");
+
+  sleep (20);
+  cout << "add /ws/algobnb@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/algobnb@miniTicker");
+
+  sleep(10);
+  cout << "remove /ws/ethusdt@depth5@1000ms before enter_event_loop" << endl;
+  sleep(1);
+  Websocket::disconnect_endpoint("/ws/ethusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/xtzusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xtzusdt@miniTicker");
+
+  sleep (20);
+  cout << "add /ws/eosusdt@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/eosusdt@miniTicker");
+
+  sleep (20);
+  cout << "add /ws/xrpbnb@miniTicker after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xrpbnb@miniTicker");
+
+
+  sleep (20);
+  cout << "add /ws/xtzusdt@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xtzusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/eosusdt@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/eosusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/xrpbnb@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/xrpbnb@depth5@1000ms");
+
+
+  sleep (20);
+  cout << "add /ws/ethusdt@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/ethusdt@depth5@1000ms");
+
+  sleep (20);
+  cout << "add /ws/ethbusd@depth5@1000ms after enter_event_loop" << endl;
+  sleep(1);
+  Websocket::connect_endpoint(ws_klines_onData, "/ws/ethbusd@depth5@1000ms");
+
+  sleep(60*30);
   cout << "kill_all" << endl;
   sleep(5);
   Websocket::kill_all();
