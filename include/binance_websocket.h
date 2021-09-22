@@ -23,7 +23,7 @@ namespace binance
 	public :
 		static void connect_endpoint(CB user_cb, const char* path);
 		static void init();
-		static void enter_event_loop(std::chrono::hours hours = std::chrono::hours(24));
+		static void enter_event_loop(const std::chrono::hours &hours = std::chrono::hours(24));
 	};
 }
 
