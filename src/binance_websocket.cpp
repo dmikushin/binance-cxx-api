@@ -81,11 +81,12 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_WSI_CREATE:
     if(!lws_service_cancelled){
-      if (!current_data->ws_path.empty() && endpoints_prop.find(current_data->ws_path) != endpoints_prop.end()) {
+      const std::string ws_path = current_data->ws_path;
+      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
         pthread_mutex_lock(&lock_concurrent);
-        endpoints_prop[current_data->ws_path].wsi = wsi;
+        endpoints_prop[ws_path].wsi = wsi;
         lwsl_user("%s: creat wsi for current_data#:%s ws_path::%s\n",
-                  __func__, current_data->ws_path.c_str(), endpoints_prop[current_data->ws_path].ws_path.c_str());
+                  __func__, ws_path.c_str(), endpoints_prop[ws_path].ws_path.c_str());
         pthread_mutex_unlock(&lock_concurrent);
       }
     }
@@ -93,12 +94,13 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_CLIENT_ESTABLISHED:
     if(!lws_service_cancelled){
-      if (!current_data->ws_path.empty() && endpoints_prop.find(current_data->ws_path) != endpoints_prop.end()) {
+      const std::string ws_path = current_data->ws_path;
+      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
         pthread_mutex_lock(&lock_concurrent);
         lws_callback_on_writable(wsi);
-        endpoints_prop[current_data->ws_path].wsi = wsi;
+        endpoints_prop[ws_path].wsi = wsi;
         lwsl_user("%s: connection established with success current_data#:%s ws_path::%s\n",
-                  __func__, current_data->ws_path.c_str(), endpoints_prop[current_data->ws_path].ws_path.c_str());
+                  __func__, ws_path.c_str(), endpoints_prop[ws_path].ws_path.c_str());
         pthread_mutex_unlock(&lock_concurrent);
       }
 
@@ -107,25 +109,28 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_CLIENT_RECEIVE:
     if(!lws_service_cancelled){
-      if (!current_data->ws_path.empty() && endpoints_prop.find(current_data->ws_path) != endpoints_prop.end()) {
-        pthread_mutex_lock(&lock_concurrent);
-        string str_result = string(reinterpret_cast<const char *>(in), len);
-        Json::Value json_result;
-        JSONCPP_STRING err;
-        Json::CharReaderBuilder builder;
-        const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-        if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
-                           &err)) {
-          lwsl_user("%s: LWS_CALLBACK_CLIENT_RECEIVE Error Json:%s\n",
-                    __func__, err.c_str());
+      const std::string ws_path = current_data->ws_path;
+      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
+        if(endpoints_prop[ws_path].close_conn.load() == false){
+          pthread_mutex_lock(&lock_concurrent);
+          string str_result = string(reinterpret_cast<const char *>(in), len);
+          Json::Value json_result;
+          JSONCPP_STRING err;
+          Json::CharReaderBuilder builder;
+          const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+          if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
+                             &err)) {
+            lwsl_user("%s: LWS_CALLBACK_CLIENT_RECEIVE Error Json:%s\n",
+                      __func__, err.c_str());
+            json_result.clear();
+            pthread_mutex_unlock(&lock_concurrent);
+            break;
+          }
+          endpoints_prop[ws_path].json_cb(json_result);
+          endpoints_prop[ws_path].retry_count = 0;
           json_result.clear();
           pthread_mutex_unlock(&lock_concurrent);
-          break;
         }
-        endpoints_prop[current_data->ws_path].json_cb(json_result);
-        endpoints_prop[current_data->ws_path].retry_count = 0;
-        json_result.clear();
-        pthread_mutex_unlock(&lock_concurrent);
         break;
       }
       break;
@@ -147,22 +152,25 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
   }
     lws_set_opaque_user_data(wsi, NULL);
     if(!lws_service_cancelled){
-      if (!current_data->ws_path.empty() && endpoints_prop.find(current_data->ws_path) != endpoints_prop.end()) {
-        if (endpoints_prop[current_data->ws_path].close_conn.load() == true) {
+      const std::string ws_path = current_data->ws_path;
+      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
+        if (endpoints_prop[ws_path].close_conn.load() == true) {
           pthread_mutex_lock(&lock_concurrent);
-          endpoints_prop[current_data->ws_path].wsi = NULL;
-          endpoints_prop[current_data->ws_path].ws_path.clear();
-          endpoints_prop.erase(current_data->ws_path);
+          endpoints_prop[ws_path].wsi = NULL;
+          endpoints_prop[ws_path].ws_path.clear();
+          endpoints_prop.erase(ws_path);
+          lwsl_err("reason:%d  deleted: %s : %s\n", reason,
+                   in ? (char *) in : "(null)", ws_path.c_str());
           pthread_mutex_unlock(&lock_concurrent);
         } else {
-          endpoints_prop[current_data->ws_path].retry_count++;
-          endpoints_prop[current_data->ws_path].wsi = NULL;
-          auto n = force_create_ccinfo(current_data->ws_path);
-          if (n || endpoints_prop[current_data->ws_path].retry_count > (LWS_ARRAY_SIZE(backoff_ms))) {
+          endpoints_prop[ws_path].retry_count++;
+          endpoints_prop[ws_path].wsi = NULL;
+          auto n = force_create_ccinfo(ws_path);
+          if (n || endpoints_prop[ws_path].retry_count > (LWS_ARRAY_SIZE(backoff_ms))) {
             pthread_mutex_lock(&lock_concurrent);
-            endpoints_prop[current_data->ws_path].wsi = NULL;
-            endpoints_prop[current_data->ws_path].ws_path.clear();
-            endpoints_prop.erase(current_data->ws_path);
+            endpoints_prop[ws_path].wsi = NULL;
+            endpoints_prop[ws_path].ws_path.clear();
+            endpoints_prop.erase(ws_path);
             lws_cancel_service(lws_get_context(wsi));
             lws_context_destroy(lws_get_context(wsi));
             atomic_store(&lws_service_cancelled, 1);
@@ -249,7 +257,7 @@ static void force_delete_ccinfo(const std::string &path) {
         pthread_mutex_lock(&lock_concurrent);
         atomic_store(&endpoints_prop[path].close_conn, true);
         pthread_mutex_unlock(&lock_concurrent);
-        lws_set_timeout(endpoints_prop[path].wsi, PENDING_TIMEOUT_CLOSE_SEND, LWS_TO_KILL_SYNC);
+        lws_set_timeout(endpoints_prop[path].wsi, PENDING_TIMEOUT_CLOSE_SEND, LWS_TO_KILL_ASYNC);
       }
     } else {
       lwsl_err("%s: not found connect_endpoints error path::%s\n",
