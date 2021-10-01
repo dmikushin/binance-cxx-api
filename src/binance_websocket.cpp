@@ -83,11 +83,11 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
       if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
-        if(!endpoints_prop[ws_path].close_conn.load()){
+        if(!endpoints_prop.at(ws_path).close_conn.load()){
           pthread_mutex_lock(&lock_concurrent);
-          endpoints_prop[ws_path].wsi = wsi;
+          endpoints_prop.at(ws_path).wsi = wsi;
           lwsl_user("%s: create wsi for current_data#:%s ws_path::%s\n",
-                    __func__, ws_path.c_str(), endpoints_prop[ws_path].ws_path.c_str());
+                    __func__, ws_path.c_str(), endpoints_prop.at(ws_path).ws_path.c_str());
           pthread_mutex_unlock(&lock_concurrent);
         }
       }
@@ -98,12 +98,12 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
       if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
-        if(!endpoints_prop[ws_path].close_conn.load()){
+        if(!endpoints_prop.at(ws_path).close_conn.load()){
           pthread_mutex_lock(&lock_concurrent);
           lws_callback_on_writable(wsi);
-          endpoints_prop[ws_path].wsi = wsi;
+          endpoints_prop.at(ws_path).wsi = wsi;
           lwsl_user("%s: connection established with success current_data#:%s ws_path::%s\n",
-                    __func__, ws_path.c_str(), endpoints_prop[ws_path].ws_path.c_str());
+                    __func__, ws_path.c_str(), endpoints_prop.at(ws_path).ws_path.c_str());
           pthread_mutex_unlock(&lock_concurrent);
         }
       }
@@ -115,7 +115,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
       if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
-        if(!endpoints_prop[ws_path].close_conn.load()){
+        if(!endpoints_prop.at(ws_path).close_conn.load()){
           pthread_mutex_lock(&lock_concurrent);
           string str_result = string(reinterpret_cast<const char *>(in), len);
           Json::Value json_result;
@@ -130,8 +130,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
             pthread_mutex_unlock(&lock_concurrent);
             break;
           }
-          endpoints_prop[ws_path].json_cb(json_result);
-          endpoints_prop[ws_path].retry_count = 0;
+          endpoints_prop.at(ws_path).json_cb(json_result);
+          endpoints_prop.at(ws_path).retry_count = 0;
           json_result.clear();
           pthread_mutex_unlock(&lock_concurrent);
         }
@@ -158,22 +158,22 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
       if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
-        if (endpoints_prop[ws_path].close_conn.load()) {
+        if (endpoints_prop.at(ws_path).close_conn.load()) {
           pthread_mutex_lock(&lock_concurrent);
-          endpoints_prop[ws_path].wsi = nullptr;
-          endpoints_prop[ws_path].ws_path.clear();
+          endpoints_prop.at(ws_path).wsi = nullptr;
+          endpoints_prop.at(ws_path).ws_path.clear();
           endpoints_prop.erase(ws_path);
           lwsl_err("reason:%d  deleted: %s : %s\n", reason,
                    in ? (char *) in : "(null)", ws_path.c_str());
           pthread_mutex_unlock(&lock_concurrent);
         } else {
-          endpoints_prop[ws_path].retry_count++;
-          endpoints_prop[ws_path].wsi = nullptr;
+          endpoints_prop.at(ws_path).retry_count++;
+          endpoints_prop.at(ws_path).wsi = nullptr;
           auto n = force_create_ccinfo(ws_path);
-          if (n || endpoints_prop[ws_path].retry_count > (LWS_ARRAY_SIZE(backoff_ms))) {
+          if (n || endpoints_prop.at(ws_path).retry_count > (LWS_ARRAY_SIZE(backoff_ms))) {
             pthread_mutex_lock(&lock_concurrent);
-            endpoints_prop[ws_path].wsi = nullptr;
-            endpoints_prop[ws_path].ws_path.clear();
+            endpoints_prop.at(ws_path).wsi = nullptr;
+            endpoints_prop.at(ws_path).ws_path.clear();
             endpoints_prop.erase(ws_path);
             lws_cancel_service(lws_get_context(wsi));
             lws_context_destroy(lws_get_context(wsi));
@@ -221,7 +221,7 @@ static int force_create_ccinfo(const std::string &path) {
   ccinfo.context = context;
   ccinfo.port = BINANCE_WS_PORT;
   ccinfo.address = BINANCE_WS_HOST;
-  ccinfo.path = endpoints_prop[path].ws_path.c_str();
+  ccinfo.path = endpoints_prop.at(path).ws_path.c_str();
   ccinfo.host = lws_canonical_hostname(context);
   ccinfo.origin = "origin";
   ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED |
@@ -231,18 +231,18 @@ static int force_create_ccinfo(const std::string &path) {
   ccinfo.protocol = protocols[0].name;
   ccinfo.local_protocol_name = protocols[0].name;
   ccinfo.retry_and_idle_policy = &retry;
-  ccinfo.userdata = &endpoints_prop[path];
-  ccinfo.pwsi = &endpoints_prop[path].wsi;
-  endpoints_prop[path].conn = lws_client_connect_via_info(&ccinfo);
-  if (!endpoints_prop[path].conn) {
+  ccinfo.userdata = &endpoints_prop.at(path);
+  ccinfo.pwsi = &endpoints_prop.at(path).wsi;
+  endpoints_prop.at(path).conn = lws_client_connect_via_info(&ccinfo);
+  if (!endpoints_prop.at(path).conn) {
     lwsl_err("%s: Failed :%s\n",
-             __func__, endpoints_prop[path].ws_path.c_str());
+             __func__, endpoints_prop.at(path).ws_path.c_str());
     /*try cancel the service*/
     atomic_store(&lws_service_cancelled, 1);
     return 1;
   }
   lwsl_user("%s: success, original_path#:%s retry_count[%d] ws_path::%s\n",
-            __func__, path.c_str(), endpoints_prop[path].retry_count, endpoints_prop[path].ws_path.c_str());
+            __func__, path.c_str(), endpoints_prop.at(path).retry_count, endpoints_prop.at(path).ws_path.c_str());
   return 0;
 }
 
@@ -251,13 +251,13 @@ static void force_delete_ccinfo(const std::string &path) {
 
   if ( endpoints_prop.find(path) != endpoints_prop.end() ) {
     lwsl_info("%s: found connect_endpoints ws_path::%s\n",
-              __func__, endpoints_prop[path].ws_path.c_str());
-    if(endpoints_prop[path].wsi) {
+              __func__, endpoints_prop.at(path).ws_path.c_str());
+    if(endpoints_prop.at(path).wsi) {
       pthread_mutex_lock(&lock_concurrent);
-      atomic_store(&endpoints_prop[path].close_conn, true);
+      atomic_store(&endpoints_prop.at(path).close_conn, true);
       pthread_mutex_unlock(&lock_concurrent);
       /*use Async Kill*/
-      lws_set_timeout(endpoints_prop[path].wsi, PENDING_TIMEOUT_CLOSE_SEND, LWS_TO_KILL_ASYNC);
+      lws_set_timeout(endpoints_prop.at(path).wsi, PENDING_TIMEOUT_CLOSE_SEND, LWS_TO_KILL_ASYNC);
     }
   } else {
     lwsl_err("%s: not found connect_endpoints error path::%s\n",
@@ -309,26 +309,14 @@ void binance::Websocket::connect_endpoint(CB cb,const std::string &path) {
     return;
   }
   if(!lws_service_cancelled){
-    if (endpoints_prop.find(path) == endpoints_prop.end()) {
-      pthread_mutex_lock(&lock_concurrent);
-      endpoints_prop[path].ws_path = path;
-      endpoints_prop[path].json_cb = cb;
-      atomic_store(&endpoints_prop[path].close_conn, false);
-      pthread_mutex_unlock(&lock_concurrent);
-      int n = force_create_ccinfo(path);
-      lwsl_user("%s: connecting::%s connect result[%s],\n",
-                __func__, path.c_str(), n ? "NotOkay" : "Okay");
-    } else {
-      force_delete_ccinfo(path);
-      pthread_mutex_lock(&lock_concurrent);
-      endpoints_prop[path].ws_path = path;
-      endpoints_prop[path].json_cb = cb;
-      atomic_store(&endpoints_prop[path].close_conn, false);
-      pthread_mutex_unlock(&lock_concurrent);
-      int n = force_create_ccinfo(path);
-      lwsl_err("%s: Wrong connection exist::%s reconnect result[%s],\n",
-               __func__, path.c_str(), n ? "NotOkay" : "Okay");
-    }
+    pthread_mutex_lock(&lock_concurrent);
+    endpoints_prop[path].ws_path = path;
+    endpoints_prop[path].json_cb = cb;
+    atomic_store(&endpoints_prop[path].close_conn, false);
+    pthread_mutex_unlock(&lock_concurrent);
+    int n = force_create_ccinfo(path);
+    lwsl_user("%s: connecting::%s connect result[%s],\n",
+              __func__, path.c_str(), n ? "NotOkay" : "Okay");
   } else {
     lwsl_err("%s: no service running,\n",
              __func__);
