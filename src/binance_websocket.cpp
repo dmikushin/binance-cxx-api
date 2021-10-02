@@ -82,7 +82,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
   case LWS_CALLBACK_WSI_CREATE:
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
-      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
+      if (!ws_path.empty() && ws_path.find("/ws/") != std::string::npos && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
         if(!endpoints_prop.at(ws_path).close_conn.load()){
           pthread_mutex_lock(&lock_concurrent);
           endpoints_prop.at(ws_path).wsi = wsi;
@@ -97,7 +97,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
   case LWS_CALLBACK_CLIENT_ESTABLISHED:
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
-      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
+      if (!ws_path.empty() && ws_path.find("/ws/") != std::string::npos && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
         if(!endpoints_prop.at(ws_path).close_conn.load()){
           pthread_mutex_lock(&lock_concurrent);
           lws_callback_on_writable(wsi);
@@ -114,7 +114,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
   case LWS_CALLBACK_CLIENT_RECEIVE:
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
-      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
+      if (!ws_path.empty() && ws_path.find("/ws/") != std::string::npos && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
         if(!endpoints_prop.at(ws_path).close_conn.load()){
           pthread_mutex_lock(&lock_concurrent);
           string str_result = string(reinterpret_cast<const char *>(in), len);
@@ -157,7 +157,7 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
     lws_set_opaque_user_data(wsi, nullptr);
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
-      if (!ws_path.empty() && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
+      if (!ws_path.empty() && ws_path.find("/ws/") != std::string::npos && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
         if (endpoints_prop.at(ws_path).close_conn.load()) {
           pthread_mutex_lock(&lock_concurrent);
           endpoints_prop.at(ws_path).wsi = nullptr;
@@ -233,10 +233,12 @@ static int force_create_ccinfo(const std::string &path) {
   ccinfo.retry_and_idle_policy = &retry;
   ccinfo.userdata = &endpoints_prop.at(path);
   ccinfo.pwsi = &endpoints_prop.at(path).wsi;
+  atomic_store(&endpoints_prop.at(path).close_conn, false);
   endpoints_prop.at(path).conn = lws_client_connect_via_info(&ccinfo);
   if (!endpoints_prop.at(path).conn) {
     lwsl_err("%s: Failed :%s\n",
              __func__, endpoints_prop.at(path).ws_path.c_str());
+    atomic_store(&endpoints_prop.at(path).close_conn, true);
     /*try cancel the service*/
     atomic_store(&lws_service_cancelled, 1);
     return 1;
@@ -312,7 +314,6 @@ void binance::Websocket::connect_endpoint(CB cb,const std::string &path) {
     pthread_mutex_lock(&lock_concurrent);
     endpoints_prop[path].ws_path = path;
     endpoints_prop[path].json_cb = cb;
-    atomic_store(&endpoints_prop[path].close_conn, false);
     pthread_mutex_unlock(&lock_concurrent);
     int n = force_create_ccinfo(path);
     lwsl_user("%s: connecting::%s connect result[%s],\n",
@@ -358,7 +359,6 @@ void binance::Websocket::enter_event_loop(const std::chrono::hours &hours) {
     } catch (exception &e) {
       lwsl_err("%s:::%s\n",
                __func__, e.what());
-      Logger::write_log("<BinaCPP_websocket::enter_event_loop> Error ! %s", e.what());
       /* extra check if not null */
       if(context)lws_cancel_service(context);
       break;
