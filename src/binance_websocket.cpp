@@ -17,6 +17,7 @@ using namespace binance;
 using namespace std;
 
 static struct lws_context *context;
+static atomic<int> protocol_init(0);
 static atomic<int> lws_service_cancelled(0);
 static int force_create_ccinfo(const std::string &path);
 /*
@@ -26,10 +27,10 @@ static int force_create_ccinfo(const std::string &path);
 struct endpoint_connection {
   struct lws *wsi;         /* related wsi if any */
   uint16_t retry_count; /* count of consecutive retries */
-  lws *conn;
   CB json_cb;
   std::string ws_path;
   atomic<bool> close_conn;
+  atomic<bool> creating_conn;
 };
 
 static std::unordered_map<std::string, endpoint_connection> endpoints_prop;
@@ -70,7 +71,7 @@ struct lws_protocols protocols[] =
             .rx_buffer_size = 128 * 1024,
         },
 
-        {nullptr, nullptr, 0, 0} /* end */
+        {nullptr, nullptr, 0, 0}
     };
 
 static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len) {
@@ -78,6 +79,13 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
   auto *current_data = static_cast< endpoint_connection *>(user);
 
   switch (reason) {
+
+  case LWS_CALLBACK_PROTOCOL_INIT:
+  case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
+    atomic_store(&protocol_init, 1);
+    lwsl_user("%s: PROTOCOL_INIT OKAY, reason:%d\n",
+              __func__, reason);
+    break;
 
   case LWS_CALLBACK_WSI_CREATE:
     if(!lws_service_cancelled){
@@ -124,8 +132,8 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
           const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
           if (!reader->parse(str_result.c_str(), str_result.c_str() + str_result.length(), &json_result,
                              &err)) {
-            lwsl_user("%s: LWS_CALLBACK_CLIENT_RECEIVE Error Json:%s\n",
-                      __func__, err.c_str());
+            lwsl_err("%s: LWS_CALLBACK_CLIENT_RECEIVE Error Json:%s\n",
+                     __func__, err.c_str());
             json_result.clear();
             pthread_mutex_unlock(&lock_concurrent);
             break;
@@ -143,6 +151,10 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
 
   case LWS_CALLBACK_CLOSED :
   case LWS_CALLBACK_CLIENT_WRITEABLE:
+    if (in != nullptr){
+      lwsl_err("case LWS_CALLBACK_reason:%d  ERROR: %s\n", reason,
+               in ? (char *) in : "(null)");
+    }
     break;
 
 
@@ -154,34 +166,40 @@ static int event_cb(lws *wsi, enum lws_callback_reasons reason, void *user, void
       lwsl_err("case reason:%d  ERROR: %s\n", reason,
                in ? (char *) in : "(null)");
     }
-    lws_set_opaque_user_data(wsi, nullptr);
+
     if(!lws_service_cancelled){
       const std::string ws_path = current_data->ws_path;
       if (!ws_path.empty() && ws_path.find("/ws/") != std::string::npos && endpoints_prop.find(ws_path) != endpoints_prop.end()) {
-        if (endpoints_prop.at(ws_path).close_conn.load()) {
+        if (endpoints_prop.at(ws_path).close_conn.load() && !endpoints_prop.at(ws_path).creating_conn.load()) {
           pthread_mutex_lock(&lock_concurrent);
           endpoints_prop.at(ws_path).wsi = nullptr;
           endpoints_prop.at(ws_path).ws_path.clear();
+          lws_set_opaque_user_data(wsi, &endpoints_prop.at(ws_path));
           endpoints_prop.erase(ws_path);
           lwsl_err("reason:%d  deleted: %s : %s\n", reason,
                    in ? (char *) in : "(null)", ws_path.c_str());
           pthread_mutex_unlock(&lock_concurrent);
-        } else {
+        } else if(!endpoints_prop.at(ws_path).close_conn.load() && !endpoints_prop.at(ws_path).creating_conn.load()){
+          pthread_mutex_lock(&lock_concurrent);
           endpoints_prop.at(ws_path).retry_count++;
           endpoints_prop.at(ws_path).wsi = nullptr;
-          auto n = force_create_ccinfo(ws_path);
-          if (n || endpoints_prop.at(ws_path).retry_count > (LWS_ARRAY_SIZE(backoff_ms))) {
+          pthread_mutex_unlock(&lock_concurrent);
+          if (endpoints_prop.at(ws_path).retry_count > (LWS_ARRAY_SIZE(backoff_ms)) || force_create_ccinfo(ws_path) ) {
             pthread_mutex_lock(&lock_concurrent);
             endpoints_prop.at(ws_path).wsi = nullptr;
             endpoints_prop.at(ws_path).ws_path.clear();
+            lws_set_opaque_user_data(wsi, &endpoints_prop.at(ws_path));
             endpoints_prop.erase(ws_path);
             lws_cancel_service(lws_get_context(wsi));
-            lws_context_destroy(lws_get_context(wsi));
             atomic_store(&lws_service_cancelled, 1);
             pthread_mutex_unlock(&lock_concurrent);
             return -1;
           }
         }
+      }else{
+        /*unknown*/
+        lwsl_user("case reason:%d  ERROR unknown WSI: %s\n", reason,
+                  in ? (char *) in : "(null)");
       }
     }
     break;
@@ -216,14 +234,25 @@ static void sigint_handler(int sig) {
 
 /* do not use pthread_mutex_lock on force_create_ccinfo*/
 static int force_create_ccinfo(const std::string &path) {
+
+  while (endpoints_prop.at(path).creating_conn.load()){
+    if(!endpoints_prop.at(path).creating_conn.load())
+      break;
+    if(!context || lws_service_cancelled)
+      return 1;
+  }
+
+  atomic_store(&endpoints_prop.at(path).creating_conn, true);
+  atomic_store(&endpoints_prop.at(path).close_conn, false);
+
   struct lws_client_connect_info ccinfo{};
   memset(&ccinfo, 0, sizeof(ccinfo));
   ccinfo.context = context;
   ccinfo.port = BINANCE_WS_PORT;
   ccinfo.address = BINANCE_WS_HOST;
   ccinfo.path = endpoints_prop.at(path).ws_path.c_str();
-  ccinfo.host = lws_canonical_hostname(context);
-  ccinfo.origin = "origin";
+  ccinfo.host = ccinfo.address;
+  ccinfo.origin = ccinfo.address;
   ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED |
       LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK |
       LCCSCF_PIPELINE | LCCSCF_PRIORITIZE_READS |
@@ -233,16 +262,18 @@ static int force_create_ccinfo(const std::string &path) {
   ccinfo.retry_and_idle_policy = &retry;
   ccinfo.userdata = &endpoints_prop.at(path);
   ccinfo.pwsi = &endpoints_prop.at(path).wsi;
-  atomic_store(&endpoints_prop.at(path).close_conn, false);
-  endpoints_prop.at(path).conn = lws_client_connect_via_info(&ccinfo);
-  if (!endpoints_prop.at(path).conn) {
+
+  if (!lws_client_connect_via_info(&ccinfo)) {
     lwsl_err("%s: Failed :%s\n",
              __func__, endpoints_prop.at(path).ws_path.c_str());
+    atomic_store(&endpoints_prop.at(path).creating_conn, false);
     atomic_store(&endpoints_prop.at(path).close_conn, true);
     /*try cancel the service*/
     atomic_store(&lws_service_cancelled, 1);
     return 1;
   }
+  atomic_store(&endpoints_prop.at(path).creating_conn, false);
+  atomic_store(&endpoints_prop.at(path).close_conn, false);
   lwsl_user("%s: success, original_path#:%s retry_count[%d] ws_path::%s\n",
             __func__, path.c_str(), endpoints_prop.at(path).retry_count, endpoints_prop.at(path).ws_path.c_str());
   return 0;
@@ -254,8 +285,15 @@ static void force_delete_ccinfo(const std::string &path) {
   if ( endpoints_prop.find(path) != endpoints_prop.end() ) {
     lwsl_info("%s: found connect_endpoints ws_path::%s\n",
               __func__, endpoints_prop.at(path).ws_path.c_str());
-    if(endpoints_prop.at(path).wsi) {
+    while (endpoints_prop.at(path).creating_conn.load()){
+      if(!endpoints_prop.at(path).creating_conn.load())
+        break;
+      if(!context || lws_service_cancelled)
+        return;
+    }
+    if(!lws_service_cancelled && endpoints_prop.at(path).wsi && !endpoints_prop.at(path).close_conn.load()) {
       pthread_mutex_lock(&lock_concurrent);
+      atomic_store(&endpoints_prop.at(path).creating_conn, false);
       atomic_store(&endpoints_prop.at(path).close_conn, true);
       pthread_mutex_unlock(&lock_concurrent);
       /*use Async Kill*/
@@ -298,6 +336,11 @@ void binance::Websocket::init() {
     pthread_mutex_destroy(&lock_concurrent);
     return;
   } else {
+    lws_service(context, 0);
+    while (!protocol_init.load()){
+      if(protocol_init.load())
+        break;
+    }
     atomic_store(&lws_service_cancelled, 0);
   }
 }
@@ -305,15 +348,27 @@ void binance::Websocket::init() {
 // Register call backs
 void binance::Websocket::connect_endpoint(CB cb,const std::string &path) {
 
+  while (!protocol_init.load()){
+    if(protocol_init.load() && context)
+      break;
+    sleep(1);
+    if(!context || lws_service_cancelled)
+      return;
+  }
+
   if (endpoints_prop.size() > 1024) {
     lwsl_err("%s: maximum of 1024 connect_endpoints reached,\n",
              __func__);
     return;
   }
-  if(!lws_service_cancelled){
+  if(!lws_service_cancelled && context && protocol_init.load()){
     pthread_mutex_lock(&lock_concurrent);
     endpoints_prop[path].ws_path = path;
     endpoints_prop[path].json_cb = cb;
+    endpoints_prop[path].retry_count = 0;
+    endpoints_prop[path].wsi = nullptr;
+    endpoints_prop[path].creating_conn = false;
+    endpoints_prop[path].close_conn = true;
     pthread_mutex_unlock(&lock_concurrent);
     int n = force_create_ccinfo(path);
     lwsl_user("%s: connecting::%s connect result[%s],\n",
@@ -333,7 +388,7 @@ void binance::Websocket::disconnect_endpoint(const std::string &path) {
              __func__);
     return;
   }
-  if(!lws_service_cancelled) {
+  if(!lws_service_cancelled && context && protocol_init.load()) {
     force_delete_ccinfo(path);
   } else {
     lwsl_err("%s: no service running,\n",
@@ -350,27 +405,22 @@ void binance::Websocket::enter_event_loop(const std::chrono::hours &hours) {
   lwsl_user("%s: INIT\n", __func__);
   do {
     try {
-      n = lws_service(context, 0);
-      if (lws_service_cancelled) {
-        /* extra check if not null */
-        if(context)lws_cancel_service(context);
-        break;
-      }
+      n = lws_service(context, 500);
     } catch (exception &e) {
       lwsl_err("%s:::%s\n",
                __func__, e.what());
-      /* extra check if not null */
-      if(context)lws_cancel_service(context);
       break;
     }
-  } while (n >= 0 && std::chrono::steady_clock::now() < end);
+  } while (n >= 0 && !lws_service_cancelled && std::chrono::steady_clock::now() < end);
 
-  /* ensure the service is canceled after the hours timeout */
+  /* extra ensure the service is canceled */
   pthread_mutex_lock(&lock_concurrent);
   atomic_store(&lws_service_cancelled, 1);
+  atomic_store(&protocol_init, 0);
   pthread_mutex_unlock(&lock_concurrent);
 
-  if(context)lws_context_destroy(context);
+  lws_context_destroy(context);
+  context= nullptr;
   /* extra check if not null */
   pthread_mutex_destroy(&lock_concurrent);
   endpoints_prop.clear();
