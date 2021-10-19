@@ -320,8 +320,8 @@ void binance::Websocket::init() {
   signal(SIGINT, sigint_handler);
   memset(&info, 0, sizeof(info));
   // This option is needed here to imply LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT
-  // option, which must be set on newer versions of OpenSSL.
-  info.options = LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT;
+  // option, which must be set on newer versions of SSL_Libs.
+  info.options = LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT | LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT;
   info.port = CONTEXT_PORT_NO_LISTEN;
   info.gid = -1;
   info.uid = -1;
@@ -336,12 +336,16 @@ void binance::Websocket::init() {
     pthread_mutex_destroy(&lock_concurrent);
     return;
   } else {
+    atomic_store(&lws_service_cancelled, 0);
     lws_service(context, 0);
     while (!protocol_init.load()){
       if(protocol_init.load())
         break;
+      if(lws_service_cancelled) {
+        lwsl_err("lws init failed\n");
+        return;
+      }
     }
-    atomic_store(&lws_service_cancelled, 0);
   }
 }
 
@@ -352,8 +356,10 @@ void binance::Websocket::connect_endpoint(CB cb,const std::string &path) {
     if(protocol_init.load() && context)
       break;
     sleep(1);
-    if(!context || lws_service_cancelled)
+    if(!context || lws_service_cancelled) {
+      lwsl_err("lws init/connect_endpoint failed\n");
       return;
+    }
   }
 
   if (endpoints_prop.size() > 1024) {
@@ -363,12 +369,13 @@ void binance::Websocket::connect_endpoint(CB cb,const std::string &path) {
   }
   if(!lws_service_cancelled && context && protocol_init.load()){
     pthread_mutex_lock(&lock_concurrent);
-    endpoints_prop[path].ws_path = path;
+    endpoints_prop[path].ws_path.clear();
     endpoints_prop[path].json_cb = cb;
     endpoints_prop[path].retry_count = 0;
     endpoints_prop[path].wsi = nullptr;
     endpoints_prop[path].creating_conn = false;
     endpoints_prop[path].close_conn = true;
+    endpoints_prop[path].ws_path = path;
     pthread_mutex_unlock(&lock_concurrent);
     int n = force_create_ccinfo(path);
     lwsl_user("%s: connecting::%s connect result[%s],\n",
