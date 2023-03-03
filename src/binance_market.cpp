@@ -12,6 +12,7 @@
 #include <fstream>
 #include <streambuf>
 #include <iostream>
+#include <memory>
 
 using namespace binance;
 using namespace std;
@@ -57,13 +58,41 @@ binanceError_t binance::Market::getExchangeInfo(Json::Value &json_result)
 	return status;
 }
 
+binanceError_t binance::Market::getAndSaveExchangeInfo() {
+    Logger::write_log("<getAndSave_exchangeInfo>");
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "\t";
+    std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+
+    Json::Value result;
+    getExchangeInfo(result);
+
+    std::ofstream ofs("exchangeinfo.json");
+    if (!ofs.is_open()) {
+        Logger::write_log("Failed to open file exchangeinfo.json");
+        return binanceErrorUnknown;
+    }
+
+    writer->write(result, &ofs);
+    ofs.close();
+
+    Logger::write_log("<getAndSave_exchangeInfo> Done.");
+    return binanceSuccess;
+}
+
 binanceError_t binance::Market::getExchangeInfoLocaly(Json::Value &json_result)
 {
     binanceError_t status = binanceSuccess;
 
     Logger::write_log("<getExchangeInfoLocaly>");
 
-    std::ifstream jsonFile("exchnageinfo.json");
+    std::ifstream jsonFile("exchangeinfo.json");
+
+    if (!jsonFile.good()) {
+        BINANCE_ERR_CHECK(getAndSaveExchangeInfo());
+        jsonFile = ifstream("exchangeinfo.json");
+    }
+
     std::string str_result;
 
     jsonFile.seekg(0, std::ios::end);

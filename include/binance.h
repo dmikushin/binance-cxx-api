@@ -185,6 +185,7 @@ namespace binance
 			time_t startTime = 0, time_t endTime = 0, int limit = 500);
 		binanceError_t getExchangeInfo(Json::Value &json_result);
 		binanceError_t getExchangeInfoLocaly(Json::Value &json_result);
+        binanceError_t getAndSaveExchangeInfo();
 		binanceError_t getLotSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
 		binanceError_t getTickSize(const char *symbol, double& maxQty, double& minQty, double& stepSize);
 		binanceError_t getMinNotional(const char *symbol, double& minNotional);
