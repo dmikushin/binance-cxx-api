@@ -85,3 +85,4 @@ add_executable(example example.cpp)
 target_include_directories(example PRIVATE "${JSONCPP_INCLUDE_DIRS}")
 target_link_libraries(example ${PROJECT_NAME})
 
+add_subdirectory(examples)
