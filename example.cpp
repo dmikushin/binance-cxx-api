@@ -53,6 +53,7 @@ int main()
 	Logger::set_debug_logfp(stderr);
 
 	Json::Value result;
+	double serverTime;
 
 	Server server;
 	
@@ -61,9 +62,6 @@ int main()
 	// Klines / CandleStick
 #if 1
 	BINANCE_ERR_CHECK(market.getKlines(result, "BTCUSDT", "1h", 0, 0, 10));
-#else
-    BINANCE_ERR_CHECK(market.getLastFundingRate(result, "BTCUSDT"));
-#endif
  	for (Json::Value::ArrayIndex i = 0 ; i < result.size() ; i++)
  	{
  		long start_of_candle = result[i][0].asInt64();
@@ -74,8 +72,15 @@ int main()
  		klinesCache[start_of_candle]["v"] = atof(result[i][5].asString().c_str());
  	}
 
- 	print_klinesCache();
- 		
+    print_klinesCache();
+#else
+    BINANCE_ERR_CHECK(market.getLastFundingRate(result, "BTCUSDT"));
+    std::cout << stod(result["lastFundingRate"].asString()) << endl;
+
+    BINANCE_ERR_CHECK(market.getServerTime(result));
+    std::cout << stod(result["serverTime"].asString()) << endl;
+#endif
+
  	// Klines/Candlestick update via websocket
  	Websocket::init();
  	Websocket::connect_endpoint(ws_klines_onData, "/ws/btcusdt@kline_1m"); 

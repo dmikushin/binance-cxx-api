@@ -24,7 +24,7 @@ This version is derived from https://github.com/binance-exchange/binacpp with sl
  * CMake build system
  * Refactored entire API
  * Maintaining thread safety
- * Added getLastFundingRate
+ * Added getLastFundingRate, getServerTime
 
 ### Prerequisites
 
