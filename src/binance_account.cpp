@@ -132,6 +132,80 @@ binanceError_t binance::Account::getInfo(Json::Value &json_result, long recvWind
 	return status;
 }
 
+// Get current account information. (SIGNED)
+//
+// GET /api/v3/account
+//
+// Parameters:
+// Name		Type	Mandatory	Description
+// recvWindow	LONG	NO	
+// timestamp	LONG	YES
+//
+binanceError_t binance::Account::getBalance_f(Json::Value& json_result, long recvWindow)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_balance>");
+
+	if (api_key.size() == 0 || secret_key.size() == 0)
+		status = binanceErrorMissingAccountKeys;
+	else
+	{
+		string url(hostname);
+		url = url+ "/fapi/v2/balance?";
+		string action = "GET";
+
+		string querystring("timestamp=");
+		querystring.append(to_string(get_current_ms_epoch()));
+
+		if (recvWindow > 0)
+		{
+			querystring.append("&recvWindow=");
+			querystring.append(to_string(recvWindow));
+		}
+
+		string signature = hmac_sha256(secret_key.c_str(), querystring.c_str());
+		querystring.append("&signature=");
+		querystring.append(signature);
+
+		url.append(querystring);
+		vector <string> extra_http_header;
+		string header_chunk("X-MBX-APIKEY: ");
+		header_chunk.append(api_key);
+		extra_http_header.push_back(header_chunk);
+
+		Logger::write_log("<get_balance> url = |%s|", url.c_str());
+
+		string post_data = "";
+
+		string str_result;
+		Server::getCurlWithHeader(str_result, url, extra_http_header, post_data, action);
+
+		if (str_result.size() == 0)
+			status = binanceErrorEmptyServerResponse;
+		else
+		{
+			try
+			{
+				Json::Reader reader;
+				json_result.clear();
+				reader.parse(str_result, json_result);
+				CHECK_SERVER_ERR(json_result);
+			}
+			catch (exception& e)
+			{
+				Logger::write_log("<get_balance> Error ! %s", e.what());
+				status = binanceErrorParsingServerResponse;
+			}
+		}
+	}
+
+	Logger::write_log("<get_balance> Done.\n");
+
+	return status;
+}
+
+
 // Recent trades list
 //
 // GET /api/v3/trades

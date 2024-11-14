@@ -234,6 +234,9 @@ namespace binance
 		binanceError_t cancelOrder(Json::Value &json_result, const char *symbol,
 			long orderId, const char *origClientOrderId, const char *newClientOrderId, long recvWindow);
 
+
+		binanceError_t getBalance_f(Json::Value& json_result, long recvWindow = 0);
+
 		// API key required
 		binanceError_t startUserDataStream(Json::Value &json_result);
 		binanceError_t keepUserDataStream(const char *listenKey);
