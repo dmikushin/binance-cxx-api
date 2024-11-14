@@ -18,6 +18,7 @@ set(JSONCPP_INCLUDE_DIRS
 	"${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/jsoncpp/include")
 set(JSONCPP_LIBRARIES jsoncpp_lib_static)
 
+set(ENABLE_PROGRAMS "" OFF)
 set(ENABLE_TESTING "" OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mbedtls EXCLUDE_FROM_ALL)
 
