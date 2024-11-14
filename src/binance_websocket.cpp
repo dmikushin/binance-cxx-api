@@ -121,7 +121,7 @@ void binance::Websocket::init()
 }
 
 // Register call backs
-void binance::Websocket::connect_endpoint(CB cb, const char* path)
+void binance::Websocket::connect_endpoint(CB cb, const char* path, const char* host)
 {
 	char ws_path[1024];
 	strcpy(ws_path, path);
@@ -129,7 +129,7 @@ void binance::Websocket::connect_endpoint(CB cb, const char* path)
 	// Connect if we are not connected to the server.
 	lws_client_connect_info ccinfo = { 0 };
 	ccinfo.context 	= context;
-	ccinfo.address 	= BINANCE_WS_HOST;
+	ccinfo.address 	= host;
 	ccinfo.port 	= BINANCE_WS_PORT;
 	ccinfo.path 	= ws_path;
 	ccinfo.host 	= lws_canonical_hostname(context);
