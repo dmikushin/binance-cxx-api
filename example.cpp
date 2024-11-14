@@ -59,8 +59,11 @@ int main()
 	Market market(server);
 		
 	// Klines / CandleStick
-	BINANCE_ERR_CHECK(market.getKlines(result, "POEBTC", "1h", 0, 0, 10));
-
+#if 1
+	BINANCE_ERR_CHECK(market.getKlines(result, "BTCUSDT", "1h", 0, 0, 10));
+#else
+    BINANCE_ERR_CHECK(market.getLastFundingRate(result, "BTCUSDT"));
+#endif
  	for (Json::Value::ArrayIndex i = 0 ; i < result.size() ; i++)
  	{
  		long start_of_candle = result[i][0].asInt64();
@@ -75,7 +78,7 @@ int main()
  		
  	// Klines/Candlestick update via websocket
  	Websocket::init();
- 	Websocket::connect_endpoint(ws_klines_onData, "/ws/poebtc@kline_1m"); 
+ 	Websocket::connect_endpoint(ws_klines_onData, "/ws/btcusdt@kline_1m"); 
 	Websocket::enter_event_loop();
 	
 	return 0;

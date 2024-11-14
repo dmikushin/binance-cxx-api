@@ -756,3 +756,46 @@ binanceError_t binance::Market::getKlines(Json::Value &json_result, const char *
 	return status;
 }
 
+
+binanceError_t binance::Market::getLastFundingRate(Json::Value &json_result, const char *symbol)
+{
+	binanceError_t status = binanceSuccess;
+
+	Logger::write_log("<get_fundingRate>");
+
+	string url(hostname);
+	url = "https://www.binance.com/fapi/v1/premiumIndex?";
+
+	string querystring("symbol=");
+	querystring.append(symbol);
+
+	url.append(querystring);
+	Logger::write_log("<get_fundingRate> url = |%s|", url.c_str());
+
+	string str_result;
+	Server::getCurl(str_result, url);
+
+	if (str_result.size() == 0)
+		status = binanceErrorEmptyServerResponse;
+	else
+	{
+		try
+		{
+			Json::Reader reader;
+			json_result.clear();
+			reader.parse(str_result, json_result);
+			CHECK_SERVER_ERR(json_result);
+		}
+		catch (exception &e)
+		{
+		 	Logger::write_log("<get_fundingRate> Error ! %s", e.what());
+			status = binanceErrorParsingServerResponse;
+		}
+	}
+
+	Logger::write_log("<get_fundingRate> Done.");
+
+	std::cout<<str_result<<std::endl<<std::endl;
+
+	return status;
+}
