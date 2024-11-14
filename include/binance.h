@@ -128,7 +128,7 @@ namespace binance
 
 	public :
 
-		Server(const char* hostname = "https://api.binance.com", bool simulation = false);
+		Server(const char* hostname = "https://api.binance.com",const char* prefix = "/api/v3", bool simulation = false);
 		
 		const std::string& getHostname() const;
 		bool isSimulator() const;
@@ -140,12 +140,17 @@ namespace binance
 
 		static binanceError_t getCurlWithHeader(std::string& result_json, const std::string& url,
 			const std::vector<std::string>& extra_http_header, const std::string& post_data, const std::string& action);
+	
+		const std::string prefix;
+
 	};
 
 	class Market
 	{
 		const std::string& hostname;
 		const Server& server;
+		std::string prefix;
+
 
 	public :
 
@@ -194,6 +199,8 @@ namespace binance
 
 		Account(const binance::Server& server,
 			const std::string api_key = "", const std::string secret_key = "");
+
+		const std::string prefix;
 
 		bool keysAreSet() const;
 

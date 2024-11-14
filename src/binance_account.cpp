@@ -20,7 +20,7 @@ const string binance::Account::default_secret_key_path = "$HOME/.bitrader/secret
 
 binance::Account::Account(const binance::Server& server_, const string api_key_, const string secret_key_) :
 
-hostname(server_.getHostname()), server(server_), api_key(api_key_), secret_key(secret_key_)
+hostname(server_.getHostname()), server(server_), api_key(api_key_), secret_key(secret_key_),prefix(server_.prefix)
 
 {
 	if (api_key == "")

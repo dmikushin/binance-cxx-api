@@ -12,9 +12,12 @@
 using namespace binance;
 using namespace std;
 
-binance::Server::Server(const char* hostname_, bool simulation_) : hostname(hostname_), simulation(simulation_) { }
+binance::Server::Server(const char* hostname_,const char* prefix, bool simulation_) : hostname(hostname_),prefix(prefix) ,simulation(simulation_) { }
 
-const std::string& binance::Server::getHostname() const { return hostname; }
+const std::string& binance::Server::getHostname() const 
+{ 
+	return hostname; 
+}
 
 bool binance::Server::isSimulator() const { return simulation; }
 
@@ -26,7 +29,7 @@ binanceError_t binance::Server::getTime(Json::Value &json_result)
 	Logger::write_log("<get_serverTime>");
 
 	string url(hostname);
-	url += "/api/v3/time";
+	url += prefix +"/time";
 
 	string str_result;
 	getCurl(str_result, url);

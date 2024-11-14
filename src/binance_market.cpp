@@ -16,7 +16,9 @@
 using namespace binance;
 using namespace std;
 
-binance::Market::Market(const binance::Server& server_) : hostname(server_.getHostname()), server(server_) { }
+binance::Market::Market(const binance::Server& server_) : hostname(server_.getHostname()), server(server_),prefix(server_.prefix)
+{ 
+}
 
 // Get Exchange information
 //GET /api/v3/exchangeInfo
@@ -706,7 +708,7 @@ binanceError_t binance::Market::getKlines(Json::Value &json_result, const char *
 	Logger::write_log("<get_klines>");
 
 	string url(hostname);
-	url += "/api/v3/klines?";
+	url += prefix + "/klines?";
 
 	string querystring("symbol=");
 	querystring.append(symbol);
